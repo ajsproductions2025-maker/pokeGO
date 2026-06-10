@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeGo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;padding:1rem}
+.app{max-width:700px;margin:0 auto}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding:.75rem 1.25rem;background:#fff;border-radius:14px;border:1px solid #e0e0d8;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.logo{font-size:24px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px}.logo span{color:#e03c3c}
+.balls{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#1a1a1a}
+.ball-svg{width:22px;height:22px;flex-shrink:0}
+.tabs{display:flex;gap:8px;margin-bottom:1.25rem}
+.tab{padding:8px 20px;border-radius:10px;border:1px solid #e0e0d8;background:#fff;cursor:pointer;font-size:14px;color:#666;transition:all .15s;font-weight:500}
+.tab.active{background:#f0f0ea;color:#1a1a1a;border-color:#bbb;font-weight:600}
+.section{display:none}.section.active{display:block}
+.pack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:1.5rem}
+.pack-card{background:#fff;border:1px solid #e0e0d8;border-radius:14px;padding:14px 10px;cursor:pointer;text-align:center;transition:all .15s;user-select:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.pack-card:hover{border-color:#aaa;background:#fafaf8;transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.08)}
+.pack-card:active{transform:scale(.97)}
+.pack-symbol{width:48px;height:48px;margin:0 auto 8px;display:block}
+.pack-name{font-size:12px;font-weight:600;color:#1a1a1a;margin-bottom:3px}
+.pack-cost{font-size:11px;color:#888;display:flex;align-items:center;justify-content:center;gap:3px}
+.pack-rarity{font-size:10px;padding:2px 8px;border-radius:99px;margin-top:5px;display:inline-block;font-weight:500}
+.r-common{background:#e8f0e8;color:#2d6e2d}.r-uncommon{background:#e0eaf5;color:#1a5fa0}.r-rare{background:#ede0f7;color:#6a2ba8}.r-epic{background:#fdefd6;color:#b05e00}.r-legendary{background:#fce8e8;color:#a01a1a}
+.rates-row{font-size:10px;color:#aaa;margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.tier-label{font-size:12px;font-weight:600;color:#888;margin-bottom:8px;margin-top:.75rem;display:flex;align-items:center;gap:8px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:20px;padding:2rem 1.75rem;max-width:320px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-pack-label{font-size:12px;color:#888;margin-bottom:6px}
+.modal-pokemon-img{width:120px;height:120px;object-fit:contain;margin:0 auto 6px;display:block;image-rendering:pixelated}
+.modal-pokemon-name{font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:3px;text-transform:capitalize}
+.modal-pokemon-type{font-size:13px;color:#888;margin-bottom:6px}
+.modal-stage-badge{font-size:11px;padding:2px 10px;border-radius:99px;background:#f0f0ea;color:#666;border:1px solid #e0e0d8;margin-bottom:8px;display:inline-block}
+.modal-stat-row{display:flex;justify-content:center;gap:12px;margin:.5rem 0}
+.stat-box{background:#f5f5f0;border:1px solid #e0e0d8;border-radius:8px;padding:5px 12px;text-align:center;min-width:56px}
+.stat-box b{display:block;font-size:16px;font-weight:700;color:#1a1a1a}
+.stat-box span{font-size:10px;color:#888}
+.close-btn{width:100%;padding:10px;border:1px solid #ddd;background:#f5f5f0;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:#1a1a1a;margin-top:.75rem}
+.close-btn:hover{background:#eee}
+/* Collection */
+.collection-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px;margin-bottom:1.25rem}
+.mon-card{background:#fff;border:1px solid #e0e0d8;border-radius:12px;padding:10px 6px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.mon-card img{width:64px;height:64px;object-fit:contain;display:block;margin:0 auto;image-rendering:pixelated}
+.mon-card .name{font-size:11px;color:#555;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.mon-card .cnt{font-size:10px;color:#aaa}
+.empty-state{text-align:center;padding:3rem 1rem;color:#888;font-size:15px}
+/* Toast */
+.toast{background:#1a1a1a;color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;text-align:center;margin-bottom:1rem;display:none;font-weight:500}
+.toast.show{display:block}
+/* Battle */
+.battle-arena{background:#fff;border-radius:14px;border:1px solid #e0e0d8;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.fighters{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:1.25rem}
+.fighter{background:#f9f9f6;border-radius:12px;border:1px solid #e0e0d8;padding:.9rem;text-align:center}
+.fighter-label{font-size:10px;color:#888;margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fighter img{width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 5px;image-rendering:pixelated}
+.fighter-name{font-size:12px;font-weight:600;color:#1a1a1a;text-transform:capitalize}
+.fighter-type{font-size:10px;color:#888}
+.fighter-stats{display:flex;justify-content:center;gap:8px;margin-top:4px;font-size:10px;color:#aaa}
+.hp-bar-wrap{height:7px;background:#eee;border-radius:99px;margin-top:7px;overflow:hidden}
+.hp-bar{height:100%;border-radius:99px;transition:width .4s ease}
+.hp-text{font-size:10px;color:#888;margin-top:2px}
+.vs-badge{font-size:18px;font-weight:700;color:#ccc}
+.rival-badge{font-size:10px;padding:2px 8px;border-radius:99px;display:inline-block;margin-top:3px;font-weight:500}
+.rb-easy{background:#eaf3de;color:#27500a}.rb-medium{background:#fdefd6;color:#b05e00}.rb-hard{background:#fcebeb;color:#791f1f}
+.battle-log{background:#f9f9f6;border:1px solid #e0e0d8;border-radius:10px;padding:10px 14px;min-height:80px;max-height:130px;overflow-y:auto;font-size:12px;line-height:1.7;margin-bottom:.75rem}
+.log-entry{padding:1px 0;border-bottom:1px solid #f0f0ea;color:#888}
+.log-entry:last-child{border-bottom:none;color:#1a1a1a;font-weight:600}
+.battle-result{text-align:center;padding:1rem;border-radius:10px;margin-bottom:.75rem}
+.result-win{background:#eaf3de;border:1px solid #97c459;color:#27500a}
+.result-lose{background:#fcebeb;border:1px solid #f09595;color:#791f1f}
+.result-fled{background:#eaf3de;border:1px solid #97c459;color:#27500a}
+.result-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.result-sub{font-size:13px}
+.battle-btns{display:flex;gap:8px}
+.battle-btns button{flex:1;padding:10px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;border:1px solid #ddd;background:#fff;color:#1a1a1a;transition:background .15s}
+.battle-btns button:hover{background:#f5f5f0}
+.battle-btns button:disabled{opacity:.4;cursor:not-allowed}
+.atk-btn{background:#fff0f0!important;border-color:#f09595!important;color:#a01a1a!important}
+.flee-safe{background:#eaf3de!important;border-color:#97c459!important;color:#27500a!important}
+.flee-warn{background:#fdefd6!important;border-color:#ef9f27!important;color:#b05e00!important}
+.pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.pick-mon{background:#fff;border:1px solid #e0e0d8;border-radius:10px;padding:9px 5px;text-align:center;cursor:pointer;transition:all .15s}
+.pick-mon:hover{border-color:#aaa;background:#fafaf8}
+.pick-mon.selected{border:2px solid #4a90d9;background:#eef4fc}
+.pick-mon img{width:52px;height:52px;object-fit:contain;display:block;margin:0 auto;image-rendering:pixelated}
+.pick-mon .name{font-size:11px;color:#555;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.consequence-note{font-size:11px;padding:6px 10px;border-radius:8px;margin-bottom:.75rem;text-align:center;font-weight:500}
+.cn-flee-safe{background:#eaf3de;color:#27500a;border:1px solid #97c459}
+.cn-flee-warn{background:#fdefd6;color:#b05e00;border:1px solid #ef9f27}
+.hit-flash{animation:flash .25s}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.15}}
+.info-bar{font-size:11px;color:#888;background:#fff;padding:8px 12px;border-radius:10px;margin-bottom:1rem;border:1px solid #e0e0d8;line-height:1.8}
+/* Energy */
+.energy-bar{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1a6fc4}
+.attack-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem}
+.attack-btn-card{border-radius:10px;border:1.5px solid #e0e0d8;padding:9px 10px;cursor:pointer;text-align:left;background:#fff;transition:all .15s}
+.attack-btn-card:hover:not([disabled]){border-color:#aaa;background:#fafaf8}
+.attack-btn-card[disabled]{opacity:.45;cursor:not-allowed}
+.attack-btn-card.free-move{border-color:#c0dd97;background:#f4faea}
+.attack-btn-card.free-move:hover:not([disabled]){border-color:#639922;background:#eaf3de}
+.atk-name{font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:2px}
+.atk-meta{font-size:10px;color:#888;display:flex;gap:6px;align-items:center}
+.atk-dmg{font-weight:600;color:#c82020}
+.atk-cost-free{color:#27500a;font-weight:600}
+.atk-cost-paid{color:#1a6fc4;font-weight:600}
+.energy-store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
+.energy-card{background:#fff;border:1px solid #e0eaf5;border-radius:14px;padding:14px 12px;cursor:pointer;text-align:center;transition:all .15s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.energy-card:hover{border-color:#4a90d9;background:#f0f6ff}
+.energy-card-name{font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:2px}
+.energy-card-amount{font-size:20px;font-weight:700;color:#1a6fc4;margin-bottom:4px}
+.energy-card-cost{font-size:12px;color:#888;display:flex;align-items:center;justify-content:center;gap:3px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">Poke<span>Go</span></div>
+    <div class="balls">
+      <svg class="ball-svg" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" fill="#e03c3c" stroke="#222" stroke-width="2.5"/>
+        <path d="M2 20 Q2 38 20 38 Q38 38 38 20Z" fill="white"/>
+        <line x1="2" y1="20" x2="38" y2="20" stroke="#222" stroke-width="2.5"/>
+        <circle cx="20" cy="20" r="5" fill="white" stroke="#222" stroke-width="2.5"/>
+        <circle cx="20" cy="20" r="2.5" fill="#222"/>
+      </svg>
+      <span id="ball-count">100</span> Pokéballs
+    </div>
+    <div class="energy-bar">
+      <svg class="energy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="13,2 4,14 11,14 11,22 20,10 13,10" fill="#1a6fc4" stroke="#1a6fc4" stroke-width="1"/></svg>
+      <span id="energy-count">0</span> Energy
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('shop',this)">Shop</button>
+    <button class="tab" onclick="showTab('collection',this)">Collection</button>
+    <button class="tab" onclick="showTab('battle',this)">Battle</button>
+    <button class="tab" onclick="showTab('energy',this)">⚡ Energy</button>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="shop" class="section active"></div>
+  <div id="collection" class="section"></div>
+  <div id="battle" class="section"></div>
+  <div id="energy" class="section"></div>
+</div>
+
+<!-- Pack Open Modal -->
+<div class="modal-overlay" id="pack-modal">
+  <div class="modal">
+    <div class="modal-pack-label" id="pack-opened-label"></div>
+    <img id="mon-img" class="modal-pokemon-img" src="" alt="" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
+    <div class="modal-pokemon-name" id="mon-name"></div>
+    <div class="modal-pokemon-type" id="mon-type"></div>
+    <div id="mon-stage-wrap"></div>
+    <div class="modal-stat-row" id="mon-stats"></div>
+    <span class="pack-rarity" id="mon-rarity-badge"></span>
+    <div style="font-size:12px;color:#888;margin-top:8px" id="mon-dupe"></div>
+    <button class="close-btn" onclick="closePackModal()">Nice!</button>
+  </div>
+</div>
+
+<script>
+// ── PokeAPI sprite helper ──────────────────────────────────────────────────
+// Uses official PokeAPI sprites (gen-v front default, free & public)
+const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+// Map pokemon name → pokedex number for sprite lookup
+const DEX={
+  // Gen 1
+  "Bulbasaur":1,"Ivysaur":2,"Venusaur":3,"Charmander":4,"Charmeleon":5,"Charizard":6,
+  "Squirtle":7,"Wartortle":8,"Blastoise":9,"Caterpie":10,"Metapod":11,"Butterfree":12,
+  "Weedle":13,"Kakuna":14,"Beedrill":15,"Pidgey":16,"Pidgeotto":17,"Pidgeot":18,
+  "Rattata":19,"Raticate":20,"Spearow":21,"Fearow":22,"Ekans":23,"Arbok":24,
+  "Pikachu":25,"Raichu":26,"Sandshrew":27,"Sandslash":28,"Nidoran♀":29,"Nidorina":30,
+  "Nidoqueen":31,"Nidoran♂":32,"Nidorino":33,"Nidoking":34,"Clefairy":35,"Clefable":36,
+  "Vulpix":37,"Ninetales":38,"Jigglypuff":39,"Wigglytuff":40,"Zubat":41,"Golbat":42,
+  "Oddish":43,"Gloom":44,"Vileplume":45,"Paras":46,"Parasect":47,"Venonat":48,"Venomoth":49,
+  "Diglett":50,"Dugtrio":51,"Meowth":52,"Persian":53,"Psyduck":54,"Golduck":55,
+  "Mankey":56,"Primeape":57,"Growlithe":58,"Arcanine":59,"Poliwag":60,"Poliwhirl":61,
+  "Poliwrath":62,"Abra":63,"Kadabra":64,"Alakazam":65,"Machop":66,"Machoke":67,"Machamp":68,
+  "Bellsprout":69,"Weepinbell":70,"Victreebel":71,"Tentacool":72,"Tentacruel":73,
+  "Geodude":74,"Graveler":75,"Golem":76,"Ponyta":77,"Rapidash":78,"Slowpoke":79,"Slowbro":80,
+  "Magnemite":81,"Magneton":82,"Horsea":116,"Seadra":117,"Onix":95,"Exeggcute":102,
+  "Cubone":104,"Marowak":105,"Hitmonlee":106,"Hitmonchan":107,"Koffing":109,"Weezing":110,
+  "Rhyhorn":111,"Rhydon":112,"Chansey":113,"Horsea":116,"Seadra":117,"Jynx":124,"Electabuzz":125,
+  "Magmar":126,"Pinsir":127,"Eevee":133,"Vaporeon":134,"Jolteon":135,"Flareon":136,
+  "Snorlax":143,"Articuno":144,"Zapdos":145,"Moltres":146,"Dratini":147,"Dragonair":148,"Dragonite":149,"Mewtwo":150,"Mew":151,
+  // Gen 2
+  "Chikorita":152,"Bayleef":153,"Meganium":154,"Cyndaquil":155,"Quilava":156,"Typhlosion":157,
+  "Totodile":158,"Croconaw":159,"Feraligatr":160,"Sentret":161,"Furret":162,"Hoothoot":163,"Noctowl":164,
+  "Spinarak":167,"Ariados":168,"Crobat":169,"Pichu":172,"Cleffa":173,"Togepi":175,"Togetic":176,
+  "Natu":177,"Xatu":178,"Mareep":179,"Flaaffy":180,"Ampharos":181,"Sudowoodo":185,"Swinub":220,"Piloswine":221,
+  "Hoppip":187,"Skiploom":188,"Jumpluff":189,"Wooper":194,"Quagsire":195,"Espeon":196,"Umbreon":197,
+  "Slowking":199,"Misdreavus":200,"Sneasel":215,"Teddiursa":216,"Ursaring":217,"Phanpy":231,"Donphan":232,
+  "Hitmontop":237,"Blissey":242,"Raikou":243,"Entei":244,"Suicune":245,"Larvitar":246,"Pupitar":247,
+  "Tyranitar":248,"Lugia":249,"Ho-Oh":250,"Celebi":251,
+  // Gen 3
+  "Treecko":252,"Grovyle":253,"Sceptile":254,"Torchic":255,"Combusken":256,"Blaziken":257,
+  "Mudkip":258,"Marshtomp":259,"Swampert":260,"Zigzagoon":263,"Linoone":264,"Wurmple":265,"Silcoon":266,
+  "Beautifly":267,"Cascoon":268,"Dustox":269,"Surskit":283,"Masquerain":284,"Shroomish":285,"Breloom":286,
+  "Taillow":276,"Swellow":277,"Wingull":278,"Pelipper":279,"Ralts":280,"Kirlia":281,"Gardevoir":282,
+  "Nosepass":299,"Makuhita":296,"Hariyama":297,"Sableye":302,"Meditite":307,"Medicham":308,
+  "Aron":304,"Lairon":305,"Aggron":306,"Gulpin":316,"Swalot":317,"Trapinch":328,"Vibrava":329,"Flygon":330,
+  "Sewaddle":540,"Leavanny":542,"Bagon":371,"Shelgon":372,"Salamence":373,"Beldum":374,"Metang":375,"Metagross":376,
+  "Regirock":377,"Regice":378,"Registeel":379,"Latias":380,"Latios":381,"Kyogre":382,"Groudon":383,"Rayquaza":384,
+  "Jirachi":385,"Deoxys":386,
+  // Gen 4
+  "Turtwig":387,"Grotle":388,"Torterra":389,"Chimchar":390,"Monferno":391,"Infernape":392,
+  "Piplup":393,"Prinplup":394,"Empoleon":395,"Starly":396,"Staravia":397,"Staraptor":398,
+  "Bidoof":399,"Bibarel":400,"Shinx":403,"Luxio":404,"Luxray":405,"Cranidos":408,"Rampardos":409,
+  "Shieldon":410,"Bastiodon":411,"Wormadam":413,"Mothim":414,"Vespiquen":416,"Drifloon":425,"Drifblim":426,
+  "Mismagius":429,"Honchkrow":430,"Bonsly":438,"Gible":443,"Gabite":444,"Garchomp":445,"Munchlax":446,
+  "Lucario":448,"Hippopotas":449,"Hippowdon":450,"Drapion":452,"Croagunk":453,"Toxicroak":454,
+  "Snover":459,"Abomasnow":460,"Weavile":461,"Magnezone":462,"Electivire":466,"Leafeon":470,"Glaceon":471,
+  "Gallade":475,"Dusknoir":477,"Froslass":478,"Togekiss":468,"Yanmega":469,"Gliscor":472,"Mamoswine":473,
+  "Porygon-Z":474,"Dialga":483,"Palkia":484,"Heatran":485,"Regigigas":486,"Giratina":487,
+  "Cresselia":488,"Darkrai":491,"Shaymin":492,"Arceus":493,
+  // Gen 5
+  "Snivy":495,"Servine":496,"Serperior":497,"Tepig":498,"Pignite":499,"Emboar":500,
+  "Oshawott":501,"Dewott":502,"Samurott":503,"Pidove":519,"Tranquill":520,"Unfezant":521,
+  "Blitzle":522,"Zebstrika":523,"Roggenrola":524,"Boldore":525,"Gigalith":526,"Drilbur":529,"Excadrill":530,
+  "Timburr":532,"Gurdurr":533,"Conkeldurr":534,"Tympole":535,"Palpitoad":536,"Seismitoad":537,
+  "Throh":538,"Sawk":539,"Klink":599,"Klang":600,"Klinklang":601,"Tynamo":602,"Eelektrik":603,"Eelektross":604,
+  "Elgyem":605,"Beheeyem":606,"Litwick":607,"Lampent":608,"Chandelure":609,"Axew":610,"Fraxure":611,"Haxorus":612,
+  "Cubchoo":613,"Beartic":614,"Cryogonal":615,"Mienfoo":619,"Mienshao":620,"Druddigon":621,"Golett":622,"Golurk":623,
+  "Pawniard":624,"Bisharp":625,"Bouffalant":626,"Rufflet":627,"Braviary":628,"Vullaby":629,"Mandibuzz":630,
+  "Deino":633,"Zweilous":634,"Hydreigon":635,"Larvesta":636,"Volcarona":637,
+  "Cobalion":638,"Terrakion":639,"Virizion":640,"Tornadus":641,"Thundurus":642,"Reshiram":643,"Zekrom":644,
+  "Landorus":645,"Kyurem":646,"Keldeo":647,"Meloetta":648,"Genesect":649,
+  // Gen 6
+  "Fennekin":653,"Braixen":654,"Delphox":655,"Froakie":656,"Frogadier":657,"Greninja":658,
+  "Fletchling":661,"Fletchinder":662,"Talonflame":663,"Scatterbug":664,"Spewpa":665,"Vivillon":666,
+  "Goomy":704,"Sliggoo":705,"Goodra":706,"Klefki":707,"Phantump":708,"Trevenant":709,
+  "Honedge":679,"Doublade":680,"Aegislash":681,"Spritzee":682,"Aromatisse":683,"Swirlix":684,"Slurpuff":685,
+  "Espurr":677,"Meowstic":678,"Tyrunt":696,"Tyrantrum":697,"Amaura":698,"Aurorus":699,"Sylveon":700,
+  "Hawlucha":701,"Dedenne":702,"Carbink":703,"Diancie":719,"Hoopa":720,"Volcanion":721,
+  "Xerneas":716,"Yveltal":717,"Zygarde":718,
+  // Gen 7
+  "Rowlet":722,"Dartrix":723,"Decidueye":724,"Litten":725,"Torracat":726,"Incineroar":727,
+  "Popplio":728,"Brionne":729,"Primarina":730,"Pikipek":731,"Trumbeak":732,"Toucannon":733,
+  "Cosmog":789,"Cosmoem":790,"Solgaleo":791,"Lunala":792,"Necrozma":800,"Marshadow":802,
+  "Tapu Koko":785,"Tapu Lele":786,"Tapu Bulu":787,"Tapu Fini":788,"Magearna":801,
+  "Zeraora":807,"Meltan":808,"Melmetal":809,
+  // Gen 8
+  "Grookey":810,"Thwackey":811,"Rillaboom":812,"Scorbunny":813,"Raboot":814,"Cinderace":815,
+  "Sobble":816,"Drizzile":817,"Inteleon":818,"Rookidee":821,"Corvisquire":822,"Corviknight":823,
+  "Wooloo":831,"Dubwool":832,"Zacian":888,"Zamazenta":889,"Eternatus":890,"Zarude":893,
+  "Dreepy":886,"Drakloak":887,"Dragapult":886,
+  // Others
+  "Sneasel":215,"Mr. Mime":122,"Mime Jr.":439,"Ditto":132,"Porygon":137,"Porygon2":233,
+  "Starmie":121,"Staryu":120,"Shieldon":410,"Tirtouga":564,"Carracosta":565,"Archen":566,"Archeops":567,
+  "Kabuto":140,"Kabutops":141,"Omanyte":138,"Omastar":139,"Lileep":345,"Cradily":346,
+  "Anorith":347,"Armaldo":348,"Ferroseed":597,"Ferrothorn":598,"Lunatone":337,"Solrock":338,
+  "Hitmonlee":106,"Hitmonchan":107,"Hitmontop":237,
+  "Manaphy":490,"Victini":494,"Frillish":592,"Jellicent":593,
+  "Dragapult":887,"Dreepy":886,"Drakloak":886,
+  "Marill":183,"Azumarill":184,"Cleffa":173,
+  "Snorunt":361,"Glalie":362,"Froslass":478,
+  "Shellder":90,"Cloyster":91,"Seel":86,"Dewgong":87,
+  "Drowzee":96,"Hypno":97,"Munna":517,"Musharna":518,
+  "Natu":177,"Xatu":178,"Exeggcute":102,
+  "Trubbish":568,"Garbodor":569,"Grimer":88,"Muk":89,
+  "Poochyena":261,"Mightyena":262,"Murkrow":198,"Houndour":228,"Houndoom":229,"Absol":359,
+  "Duskull":355,"Dusclops":356,"Dusknoir":477,"Shuppet":353,"Banette":354,
+  "Klink":599,"Klang":600,"Klinklang":601,
+  "Larvitar":246,"Pupitar":247,"Bagon":371,"Shelgon":372,
+  "Scyther":123,"Scizor":212,"Heracross":214,"Shedinja":292,
+  "Togekiss":468,"Togepi":175,"Togetic":176,
+  "Mew":151,"Celebi":251,"Jirachi":385,"Manaphy":490,"Shaymin":492,"Victini":494,
+  "Deoxys":386,"Palkia":484,"Giratina":487,"Cresselia":488,"Arceus":493,"Necrozma":800,
+  "Entei":244,"Raikou":243,"Suicune":245,"Lugia":249,"Ho-Oh":250,
+  "Dialga":483,"Zacian":888,"Xerneas":716,"Yveltal":717,
+  "Volcanion":721,"Hoopa":720,"Marshadow":802,"Zarude":893,"Zeraora":807,
+  "Mewtwo":150,"Kyogre":382,"Groudon":383,"Rayquaza":384,"Eternatus":890,
+  "Tyranitar":248,"Darkrai":491,"Lucario":448,"Garchomp":445,"Hydreigon":635,
+  "Dragonite":149,"Salamence":373,"Goodra":706,"Haxorus":612,"Dragapult":887,
+  "Metagross":376,"Steelix":208,"Scizor":212,"Aggron":306,"Aegislash":681,
+  "Gengar":94,"Haunter":93,"Gastly":92,"Chandelure":609,"Dusknoir":477,
+  "Gardevoir":282,"Espeon":196,"Gallade":475,"Slowking":199,
+  "Snorlax":143,"Slaking":289,"Happiny":440,"Blissey":242,
+  "Blastoise":9,"Feraligatr":160,"Swampert":260,"Empoleon":395,"Greninja":658,"Vaporeon":134,
+  "Venusaur":3,"Meganium":154,"Sceptile":254,"Torterra":389,"Serperior":497,"Leafeon":470,
+  "Charizard":6,"Typhlosion":157,"Blaziken":257,"Infernape":392,"Emboar":500,"Delphox":655,"Flareon":136,
+  "Rampardos":409,"Bastiodon":411,"Golem":76,"Rhyperior":464,
+  "Flygon":330,"Vibrava":329,"Gabite":444,"Mamoswine":473,"Glaceon":471,"Lapras":131,
+  "Alakazam":65,"Slowbro":80,"Slowking":199,
+  "Lucario":448,"Machamp":68,"Conkeldurr":534,"Hitmontop":237,
+  "Crobat":169,"Staraptor":398,"Talonflame":663,"Togekiss":468,"Skarmory":227,"Aerodactyl":142,
+  "Dragalge":691,"Toxapex":748,"Nidoqueen":31,"Nidoking":34,"Roserade":407,
+  "Porygon-Z":474,
+  // Shadows map to base pokemon sprites
+  "Shadow Charmander":4,"Shadow Bulbasaur":1,"Shadow Squirtle":7,"Shadow Eevee":133,
+  "Shadow Pikachu":25,"Shadow Charmeleon":5,"Shadow Ivysaur":2,"Shadow Wartortle":8,
+  "Shadow Vaporeon":134,"Shadow Jolteon":135,"Shadow Charizard":6,"Shadow Venusaur":3,
+  "Shadow Blastoise":9,"Shadow Mewtwo":150,"Shadow Lugia":249,"Shadow Entei":244,
+  "Shadow Raikou":243,"Shadow Suicune":245,
+  // Remaining
+  "Porygon2":233,"Starmie":121,"Staryu":120,"Cosmoem":790,"Cosmog":789,
+  "Solrock":338,"Lunatone":337,"Wigglytuff":40,"Furret":162,"Ursaring":217,
+  "Persian":53,"Pidgeot":18,"Raticate":20,"Eelektross":604,"Beartic":614,
+  "Abomasnow":460,"Piloswine":221,"Weavile":461,"Cloyster":91,"Dewgong":87,
+  "Swalot":317,"Tentacruel":73,"Garbodor":569,"Muk":89,"Weezing":110,"Arbok":24,
+  "Toxicroak":454,"Dragalge":691,"Honchkrow":430,"Mightyena":262,"Zweilous":634,
+  "Bisharp":625,"Umbreon":197,"Slurpuff":685,"Aromatisse":683,"Azumarill":184,"Granbull":210,
+  "Tyrantrum":697,"Aurorus":699,"Carracosta":565,"Archeops":567,"Cradily":346,
+  "Armaldo":348,"Omastar":139,"Kabutops":141,"Bastiodon":411,"Klinklang":601,
+  "Ferrothorn":598,"Bisharp":625,"Doublade":680,"Aegislash":681,"Registeel":379,
+  "Dialga":483,"Shedinja":292,"Butterfree":12,"Beedrill":15,"Heracross":214,
+  "Pinsir":127,"Honedge":679,"Pawniard":624,"Beldum":374,"Metang":375,"Klink":599,
+  "Togekiss":468,"Sylveon":700,"Clefable":36,"Gardevoir":282,"Snubbull":209,"Granbull":210,
+  "Marill":183,"Swirlix":684,"Spritzee":682,"Cleffa":173,"Clefairy":35,"Xerneas":716,"Zacian":888,
+  "Tirtouga":564,"Archen":566,"Lileep":345,"Anorith":347,"Shieldon":410,"Cranidos":408,
+  "Omanyte":138,"Kabuto":140,"Zygarde":718,"Darkrai":491,"Yveltal":717,
+  "Fletchling":661,"Fletchinder":662,"Larvesta":636,"Volcarona":637,"Rapidash":78,"Ponyta":77,
+  "Solgaleo":791,"Lunala":792,"Tapu Lele":786,
+  "Slowpoke":79,"Eevee":133,"Ditto":132,
+  "Dreepy":886,"Drakloak":886,"Dragapult":887,"Larvitar":246,"Deino":633,"Groudon":383,"Kyogre":382,
+  "Regirock":377
+};
+
+function spriteUrl(name){
+  const id=DEX[name];
+  if(!id)return'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
+  // Use official front sprite
+  return`${SPRITE_BASE}${id}.png`;
+}
+
+// ── SVG Pack Symbols ────────────────────────────────────────────────────────
+function packSVG(type){
+  const svgs={
+    grass:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#d4f0c0" stroke="#4a9e2f" stroke-width="2"/><path d="M24 36 Q16 28 14 18 Q20 20 24 28 Q28 20 34 18 Q32 28 24 36Z" fill="#4a9e2f"/><line x1="24" y1="36" x2="24" y2="18" stroke="#4a9e2f" stroke-width="1.5"/></svg>`,
+    fire:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#ffe0c0" stroke="#e05820" stroke-width="2"/><path d="M24 10 Q28 16 26 20 Q32 14 30 22 Q34 20 32 28 Q34 32 28 36 Q22 38 18 34 Q12 30 14 24 Q18 28 20 24 Q16 18 20 14 Q22 20 24 10Z" fill="#e05820"/></svg>`,
+    water:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#c0d8f8" stroke="#1a6fc4" stroke-width="2"/><path d="M24 12 Q30 20 30 26 Q30 32 24 36 Q18 32 18 26 Q18 20 24 12Z" fill="#1a6fc4"/></svg>`,
+    normal:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#f0ede0" stroke="#8a8070" stroke-width="2"/><polygon points="24,13 28,21 37,22 31,28 33,37 24,32 15,37 17,28 11,22 20,21" fill="#8a8070"/></svg>`,
+    electric:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#fff8c0" stroke="#c8a000" stroke-width="2"/><polygon points="28,10 18,26 24,26 20,38 32,22 26,22" fill="#c8a000"/></svg>`,
+    rock:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#e8dfc8" stroke="#7a6a40" stroke-width="2"/><polygon points="24,12 34,18 36,30 28,38 16,38 10,28 14,16" fill="#9a8a58" stroke="#7a6a40" stroke-width="1.5"/><line x1="24" y1="12" x2="22" y2="24" stroke="#7a6a40" stroke-width="1"/><line x1="34" y1="18" x2="22" y2="24" stroke="#7a6a40" stroke-width="1"/><line x1="10" y1="28" x2="22" y2="24" stroke="#7a6a40" stroke-width="1"/></svg>`,
+    ground:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#f0dcc0" stroke="#a06820" stroke-width="2"/><ellipse cx="24" cy="28" rx="14" ry="8" fill="#c88840"/><path d="M10 28 Q12 22 18 20 Q24 18 30 20 Q36 22 38 28" fill="#d4a060" stroke="none"/><line x1="24" y1="18" x2="24" y2="36" stroke="#a06820" stroke-width="1" stroke-dasharray="2,2"/></svg>`,
+    ice:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#d8f0f8" stroke="#3090b8" stroke-width="2"/><line x1="24" y1="10" x2="24" y2="38" stroke="#3090b8" stroke-width="2"/><line x1="11" y1="17" x2="37" y2="31" stroke="#3090b8" stroke-width="2"/><line x1="37" y1="17" x2="11" y2="31" stroke="#3090b8" stroke-width="2"/><circle cx="24" cy="24" r="4" fill="#3090b8"/></svg>`,
+    psychic:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#f8d8e8" stroke="#b83878" stroke-width="2"/><path d="M24 14 Q34 14 36 24 Q34 34 24 34 Q14 34 12 24 Q14 14 24 14Z" fill="none" stroke="#b83878" stroke-width="2"/><circle cx="20" cy="20" r="3" fill="#b83878"/><circle cx="28" cy="20" r="3" fill="#b83878"/><path d="M18 28 Q24 32 30 28" fill="none" stroke="#b83878" stroke-width="2" stroke-linecap="round"/></svg>`,
+    bug:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#d8f0c0" stroke="#508820" stroke-width="2"/><ellipse cx="24" cy="26" rx="7" ry="10" fill="#508820"/><ellipse cx="16" cy="22" rx="6" ry="4" fill="#70a840" transform="rotate(-20 16 22)"/><ellipse cx="32" cy="22" rx="6" ry="4" fill="#70a840" transform="rotate(20 32 22)"/><circle cx="21" cy="17" r="2" fill="#d8f0c0"/><circle cx="27" cy="17" r="2" fill="#d8f0c0"/></svg>`,
+    ghost:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#d8c8e8" stroke="#5828a0" stroke-width="2"/><path d="M14 32 Q14 16 24 14 Q34 16 34 32 Q30 28 28 32 Q26 28 24 32 Q22 28 20 32 Q18 28 14 32Z" fill="#5828a0"/><circle cx="20" cy="22" r="2.5" fill="white"/><circle cx="28" cy="22" r="2.5" fill="white"/><circle cx="20.5" cy="22.5" r="1.2" fill="#5828a0"/><circle cx="28.5" cy="22.5" r="1.2" fill="#5828a0"/></svg>`,
+    poison:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#e8c8f0" stroke="#7820a0" stroke-width="2"/><circle cx="24" cy="24" r="10" fill="#a040c0"/><circle cx="20" cy="18" r="4" fill="#c060e0"/><circle cx="28" cy="18" r="4" fill="#c060e0"/><path d="M16 30 Q20 38 28 38 Q32 30 16 30Z" fill="#7820a0"/></svg>`,
+    flying:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#d8e8f8" stroke="#2860a0" stroke-width="2"/><path d="M8 24 Q16 12 24 18 Q32 12 40 24 Q32 22 24 24 Q16 22 8 24Z" fill="#4888d0"/><path d="M8 24 Q16 32 24 28 Q32 32 40 24 Q32 26 24 24 Q16 26 8 24Z" fill="#6aa0e0"/></svg>`,
+    fighting:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#f8d8c0" stroke="#a02808" stroke-width="2"/><circle cx="18" cy="24" r="7" fill="#c83820"/><circle cx="30" cy="22" r="7" fill="#c83820"/><rect x="17" y="18" width="14" height="8" rx="3" fill="#e05030"/></svg>`,
+    dragon:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#d0d8f8" stroke="#2030a0" stroke-width="2"/><path d="M24 10 L30 18 L38 18 L32 24 L34 34 L24 28 L14 34 L16 24 L10 18 L18 18Z" fill="#2848c0" stroke="#2030a0" stroke-width="1"/></svg>`,
+    steel:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#e0e4e8" stroke="#506878" stroke-width="2"/><polygon points="24,12 34,18 34,30 24,36 14,30 14,18" fill="none" stroke="#607888" stroke-width="2"/><polygon points="24,16 30,20 30,28 24,32 18,28 18,20" fill="#8098a8"/></svg>`,
+    dark:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#302828" stroke="#181010" stroke-width="2"/><path d="M24 12 Q34 16 34 24 Q34 32 24 36 Q20 32 22 26 Q18 28 16 24 Q18 18 24 12Z" fill="#604848"/></svg>`,
+    fairy:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#f8d8e8" stroke="#c04880" stroke-width="2"/><path d="M24 12 L26 20 L34 20 L28 26 L30 34 L24 30 L18 34 L20 26 L14 20 L22 20Z" fill="#d860a0" stroke="#c04880" stroke-width="1"/></svg>`,
+    ancient:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#e8d8b8" stroke="#806820" stroke-width="2"/><path d="M16 14 L32 14 L38 24 L32 34 L16 34 L10 24Z" fill="none" stroke="#a08030" stroke-width="2"/><text x="24" y="27" text-anchor="middle" font-size="14" fill="#a08030">🦴</text></svg>`,
+    shadow:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#1a1a2e" stroke="#302050" stroke-width="2"/><path d="M24 36 Q14 28 14 20 Q14 12 24 12 Q34 12 34 20 Q34 28 24 36Z" fill="#5030a0" opacity=".7"/><circle cx="20" cy="22" r="3" fill="#c0a0ff"/><circle cx="28" cy="22" r="3" fill="#c0a0ff"/></svg>`,
+    mythic:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#fff8e0" stroke="#d4a000" stroke-width="2"/><path d="M24 10 L27 19 L37 19 L29 25 L32 34 L24 28 L16 34 L19 25 L11 19 L21 19Z" fill="#f0c000" stroke="#c09000" stroke-width="1"/><circle cx="24" cy="24" r="4" fill="white" opacity=".6"/></svg>`,
+    cosmic:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#0a0820" stroke="#3020a0" stroke-width="2"/><circle cx="24" cy="24" r="10" fill="none" stroke="#6040e0" stroke-width="1.5" stroke-dasharray="3,2"/><circle cx="24" cy="14" r="2" fill="#a080ff"/><circle cx="34" cy="24" r="2" fill="#a080ff"/><circle cx="24" cy="34" r="2" fill="#a080ff"/><circle cx="14" cy="24" r="2" fill="#a080ff"/><circle cx="24" cy="24" r="3" fill="#c0a0ff"/></svg>`,
+    divine:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#fff8f0" stroke="#e08000" stroke-width="2"/><path d="M24 10 L26 18 L34 14 L30 22 L38 24 L30 26 L34 34 L26 30 L24 38 L22 30 L14 34 L18 26 L10 24 L18 22 L14 14 L22 18Z" fill="#f0a000" stroke="#c07800" stroke-width="1"/></svg>`,
+    time:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#e8f0f8" stroke="#204880" stroke-width="2"/><circle cx="24" cy="24" r="12" fill="none" stroke="#3060a0" stroke-width="2"/><line x1="24" y1="24" x2="24" y2="14" stroke="#3060a0" stroke-width="2.5" stroke-linecap="round"/><line x1="24" y1="24" x2="30" y2="28" stroke="#3060a0" stroke-width="2" stroke-linecap="round"/></svg>`,
+    chaos:`<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#180808" stroke="#600000" stroke-width="2"/><path d="M24 10 Q38 18 34 30 Q28 38 16 32 Q8 24 16 16 Q22 10 24 10Z" fill="#800000" opacity=".8"/><path d="M24 38 Q10 30 14 18 Q20 10 32 16 Q40 24 32 32 Q26 38 24 38Z" fill="#c00000" opacity=".5"/><circle cx="24" cy="24" r="4" fill="#ff4040" opacity=".8"/></svg>`
+  };
+  return svgs[type]||svgs.normal;
+}
+
+// ── Tier / stat config ──────────────────────────────────────────────────────
+const TIER_HP_CAP=[0,100,200,300,400,500];
+const TIER_ATK_BASE=[0,[8,22],[18,38],[30,55],[45,75],[65,100]];
+
+function rollStats(tier,stage){
+  const cap=TIER_HP_CAP[tier];
+  const sm=stage===1?1:stage===2?1.15:1.30;
+  const [mn,mx]=TIER_ATK_BASE[tier];
+  const hp=Math.min(Math.round((0.60+Math.random()*0.40)*cap*sm),Math.round(cap*sm));
+  const atk=Math.round((mn+(Math.random()*(mx-mn)))*sm);
+  return{hp,atk};
+}
+
+// ── Tier / pack config ─────────────────────────────────────────────────────
+const TIERS=[
+  {name:"Tier 1",color:"#d4f0c0",text:"#2d6e2d",rarity:"Common",symbol:"grass",packs:[
+    {name:"Grass Pack",symbol:"grass",cost:20,pool:"t1_grass"},
+    {name:"Fire Pack",symbol:"fire",cost:20,pool:"t1_fire"},
+    {name:"Water Pack",symbol:"water",cost:20,pool:"t1_water"},
+    {name:"Normal Pack",symbol:"normal",cost:20,pool:"t1_normal"},
+    {name:"Electric Pack",symbol:"electric",cost:20,pool:"t1_electric"}
+  ]},
+  {name:"Tier 2",color:"#c0d8f8",text:"#1a5fa0",rarity:"Uncommon",symbol:"rock",packs:[
+    {name:"Rock Pack",symbol:"rock",cost:40,pool:"t2_rock"},
+    {name:"Ground Pack",symbol:"ground",cost:40,pool:"t2_ground"},
+    {name:"Ice Pack",symbol:"ice",cost:40,pool:"t2_ice"},
+    {name:"Psychic Pack",symbol:"psychic",cost:40,pool:"t2_psychic"},
+    {name:"Bug Pack",symbol:"bug",cost:40,pool:"t2_bug"}
+  ]},
+  {name:"Tier 3",color:"#e8c8f8",text:"#6a2ba8",rarity:"Rare",symbol:"ghost",packs:[
+    {name:"Ghost Pack",symbol:"ghost",cost:60,pool:"t3_ghost"},
+    {name:"Poison Pack",symbol:"poison",cost:60,pool:"t3_poison"},
+    {name:"Flying Pack",symbol:"flying",cost:60,pool:"t3_flying"},
+    {name:"Fighting Pack",symbol:"fighting",cost:60,pool:"t3_fighting"},
+    {name:"Dragon Pack",symbol:"dragon",cost:60,pool:"t3_dragon"}
+  ]},
+  {name:"Tier 4",color:"#fce8c0",text:"#b05e00",rarity:"Epic",symbol:"steel",packs:[
+    {name:"Steel Pack",symbol:"steel",cost:80,pool:"t4_steel"},
+    {name:"Dark Pack",symbol:"dark",cost:80,pool:"t4_dark"},
+    {name:"Fairy Pack",symbol:"fairy",cost:80,pool:"t4_fairy"},
+    {name:"Ancient Pack",symbol:"ancient",cost:80,pool:"t4_ancient"},
+    {name:"Shadow Pack",symbol:"shadow",cost:80,pool:"t4_shadow"}
+  ]},
+  {name:"Tier 5",color:"#f8c8c8",text:"#a01a1a",rarity:"Legendary",symbol:"mythic",packs:[
+    {name:"Mythic Pack",symbol:"mythic",cost:100,pool:"t5_mythic"},
+    {name:"Cosmic Pack",symbol:"cosmic",cost:100,pool:"t5_cosmic"},
+    {name:"Divine Pack",symbol:"divine",cost:100,pool:"t5_divine"},
+    {name:"Time Pack",symbol:"time",cost:100,pool:"t5_time"},
+    {name:"Chaos Pack",symbol:"chaos",cost:100,pool:"t5_chaos"}
+  ]}
+];
+
+// ── Pokémon pools ──────────────────────────────────────────────────────────
+const P={
+  t1_grass:[
+    {n:"Bulbasaur",t:"Grass/Poison",r:"Common",tier:1,stage:1,w:120},{n:"Oddish",t:"Grass/Poison",r:"Common",tier:1,stage:1,w:110},{n:"Bellsprout",t:"Grass/Poison",r:"Common",tier:1,stage:1,w:110},{n:"Chikorita",t:"Grass",r:"Common",tier:1,stage:1,w:115},{n:"Hoppip",t:"Grass/Flying",r:"Common",tier:1,stage:1,w:105},{n:"Treecko",t:"Grass",r:"Common",tier:1,stage:1,w:115},{n:"Shroomish",t:"Grass",r:"Common",tier:1,stage:1,w:110},{n:"Turtwig",t:"Grass",r:"Common",tier:1,stage:1,w:115},{n:"Snivy",t:"Grass",r:"Common",tier:1,stage:1,w:110},
+    {n:"Ivysaur",t:"Grass/Poison",r:"Uncommon",tier:1,stage:2,w:40},{n:"Gloom",t:"Grass/Poison",r:"Uncommon",tier:1,stage:2,w:38},{n:"Weepinbell",t:"Grass/Poison",r:"Uncommon",tier:1,stage:2,w:38},{n:"Bayleef",t:"Grass",r:"Uncommon",tier:1,stage:2,w:38},{n:"Grovyle",t:"Grass",r:"Uncommon",tier:1,stage:2,w:38},{n:"Grotle",t:"Grass",r:"Uncommon",tier:1,stage:2,w:38},{n:"Servine",t:"Grass",r:"Uncommon",tier:1,stage:2,w:35},
+    {n:"Venusaur",t:"Grass/Poison",r:"Rare",tier:1,stage:3,w:10},{n:"Vileplume",t:"Grass/Poison",r:"Rare",tier:1,stage:3,w:9},{n:"Victreebel",t:"Grass/Poison",r:"Rare",tier:1,stage:3,w:9},{n:"Meganium",t:"Grass",r:"Rare",tier:1,stage:3,w:9},{n:"Sceptile",t:"Grass",r:"Rare",tier:1,stage:3,w:9},{n:"Torterra",t:"Grass/Ground",r:"Rare",tier:1,stage:3,w:9},{n:"Serperior",t:"Grass",r:"Rare",tier:1,stage:3,w:8},{n:"Leafeon",t:"Grass",r:"Epic",tier:1,stage:3,w:3}
+  ],
+  t1_fire:[
+    {n:"Charmander",t:"Fire",r:"Common",tier:1,stage:1,w:120},{n:"Vulpix",t:"Fire",r:"Common",tier:1,stage:1,w:115},{n:"Growlithe",t:"Fire",r:"Common",tier:1,stage:1,w:115},{n:"Ponyta",t:"Fire",r:"Common",tier:1,stage:1,w:110},{n:"Cyndaquil",t:"Fire",r:"Common",tier:1,stage:1,w:115},{n:"Torchic",t:"Fire",r:"Common",tier:1,stage:1,w:115},{n:"Chimchar",t:"Fire",r:"Common",tier:1,stage:1,w:110},{n:"Tepig",t:"Fire",r:"Common",tier:1,stage:1,w:110},{n:"Fennekin",t:"Fire",r:"Common",tier:1,stage:1,w:110},
+    {n:"Charmeleon",t:"Fire",r:"Uncommon",tier:1,stage:2,w:42},{n:"Ninetales",t:"Fire",r:"Uncommon",tier:1,stage:2,w:38},{n:"Arcanine",t:"Fire",r:"Uncommon",tier:1,stage:2,w:40},{n:"Rapidash",t:"Fire",r:"Uncommon",tier:1,stage:2,w:38},{n:"Quilava",t:"Fire",r:"Uncommon",tier:1,stage:2,w:40},{n:"Combusken",t:"Fire/Fighting",r:"Uncommon",tier:1,stage:2,w:38},{n:"Monferno",t:"Fire/Fighting",r:"Uncommon",tier:1,stage:2,w:38},{n:"Pignite",t:"Fire/Fighting",r:"Uncommon",tier:1,stage:2,w:36},
+    {n:"Charizard",t:"Fire/Flying",r:"Rare",tier:1,stage:3,w:11},{n:"Typhlosion",t:"Fire",r:"Rare",tier:1,stage:3,w:9},{n:"Blaziken",t:"Fire/Fighting",r:"Rare",tier:1,stage:3,w:9},{n:"Infernape",t:"Fire/Fighting",r:"Rare",tier:1,stage:3,w:9},{n:"Emboar",t:"Fire/Fighting",r:"Rare",tier:1,stage:3,w:9},{n:"Delphox",t:"Fire/Psychic",r:"Rare",tier:1,stage:3,w:8},{n:"Flareon",t:"Fire",r:"Epic",tier:1,stage:3,w:3}
+  ],
+  t1_water:[
+    {n:"Squirtle",t:"Water",r:"Common",tier:1,stage:1,w:120},{n:"Poliwag",t:"Water",r:"Common",tier:1,stage:1,w:115},{n:"Horsea",t:"Water",r:"Common",tier:1,stage:1,w:110},{n:"Totodile",t:"Water",r:"Common",tier:1,stage:1,w:115},{n:"Mudkip",t:"Water",r:"Common",tier:1,stage:1,w:115},{n:"Piplup",t:"Water",r:"Common",tier:1,stage:1,w:115},{n:"Oshawott",t:"Water",r:"Common",tier:1,stage:1,w:110},{n:"Froakie",t:"Water",r:"Common",tier:1,stage:1,w:110},{n:"Sobble",t:"Water",r:"Common",tier:1,stage:1,w:110},
+    {n:"Wartortle",t:"Water",r:"Uncommon",tier:1,stage:2,w:42},{n:"Poliwhirl",t:"Water",r:"Uncommon",tier:1,stage:2,w:38},{n:"Seadra",t:"Water",r:"Uncommon",tier:1,stage:2,w:36},{n:"Croconaw",t:"Water",r:"Uncommon",tier:1,stage:2,w:40},{n:"Marshtomp",t:"Water/Ground",r:"Uncommon",tier:1,stage:2,w:40},{n:"Prinplup",t:"Water",r:"Uncommon",tier:1,stage:2,w:38},{n:"Dewott",t:"Water",r:"Uncommon",tier:1,stage:2,w:36},{n:"Frogadier",t:"Water",r:"Uncommon",tier:1,stage:2,w:36},
+    {n:"Blastoise",t:"Water",r:"Rare",tier:1,stage:3,w:11},{n:"Poliwrath",t:"Water/Fighting",r:"Rare",tier:1,stage:3,w:9},{n:"Kingdra",t:"Water/Dragon",r:"Rare",tier:1,stage:3,w:8},{n:"Feraligatr",t:"Water",r:"Rare",tier:1,stage:3,w:9},{n:"Swampert",t:"Water/Ground",r:"Rare",tier:1,stage:3,w:9},{n:"Empoleon",t:"Water/Steel",r:"Rare",tier:1,stage:3,w:9},{n:"Greninja",t:"Water/Dark",r:"Epic",tier:1,stage:3,w:3},{n:"Vaporeon",t:"Water",r:"Epic",tier:1,stage:3,w:3}
+  ],
+  t1_normal:[
+    {n:"Rattata",t:"Normal",r:"Common",tier:1,stage:1,w:120},{n:"Pidgey",t:"Normal/Flying",r:"Common",tier:1,stage:1,w:115},{n:"Meowth",t:"Normal",r:"Common",tier:1,stage:1,w:115},{n:"Jigglypuff",t:"Normal/Fairy",r:"Common",tier:1,stage:1,w:110},{n:"Sentret",t:"Normal",r:"Common",tier:1,stage:1,w:110},{n:"Teddiursa",t:"Normal",r:"Common",tier:1,stage:1,w:110},{n:"Zigzagoon",t:"Normal",r:"Common",tier:1,stage:1,w:110},{n:"Bidoof",t:"Normal",r:"Common",tier:1,stage:1,w:105},
+    {n:"Raticate",t:"Normal",r:"Uncommon",tier:1,stage:2,w:40},{n:"Pidgeotto",t:"Normal/Flying",r:"Uncommon",tier:1,stage:2,w:38},{n:"Persian",t:"Normal",r:"Uncommon",tier:1,stage:2,w:38},{n:"Wigglytuff",t:"Normal/Fairy",r:"Uncommon",tier:1,stage:2,w:36},{n:"Furret",t:"Normal",r:"Uncommon",tier:1,stage:2,w:38},{n:"Ursaring",t:"Normal",r:"Uncommon",tier:1,stage:2,w:36},{n:"Bibarel",t:"Normal/Water",r:"Uncommon",tier:1,stage:2,w:36},
+    {n:"Pidgeot",t:"Normal/Flying",r:"Rare",tier:1,stage:3,w:10},{n:"Eevee",t:"Normal",r:"Rare",tier:1,stage:1,w:12},{n:"Snorlax",t:"Normal",r:"Rare",tier:1,stage:1,w:10},{n:"Slaking",t:"Normal",r:"Rare",tier:1,stage:3,w:8},{n:"Togekiss",t:"Fairy/Flying",r:"Epic",tier:1,stage:3,w:3}
+  ],
+  t1_electric:[
+    {n:"Pichu",t:"Electric",r:"Common",tier:1,stage:1,w:110},{n:"Pikachu",t:"Electric",r:"Common",tier:1,stage:1,w:115},{n:"Magnemite",t:"Electric/Steel",r:"Common",tier:1,stage:1,w:110},{n:"Voltorb",t:"Electric",r:"Common",tier:1,stage:1,w:110},{n:"Mareep",t:"Electric",r:"Common",tier:1,stage:1,w:110},{n:"Elekid",t:"Electric",r:"Common",tier:1,stage:1,w:110},{n:"Shinx",t:"Electric",r:"Common",tier:1,stage:1,w:110},{n:"Tynamo",t:"Electric",r:"Common",tier:1,stage:1,w:105},
+    {n:"Raichu",t:"Electric",r:"Uncommon",tier:1,stage:2,w:42},{n:"Magneton",t:"Electric/Steel",r:"Uncommon",tier:1,stage:2,w:38},{n:"Electrode",t:"Electric",r:"Uncommon",tier:1,stage:2,w:38},{n:"Flaaffy",t:"Electric",r:"Uncommon",tier:1,stage:2,w:38},{n:"Electabuzz",t:"Electric",r:"Uncommon",tier:1,stage:2,w:40},{n:"Luxio",t:"Electric",r:"Uncommon",tier:1,stage:2,w:38},{n:"Eelektrik",t:"Electric",r:"Uncommon",tier:1,stage:2,w:36},
+    {n:"Magnezone",t:"Electric/Steel",r:"Rare",tier:1,stage:3,w:10},{n:"Ampharos",t:"Electric",r:"Rare",tier:1,stage:3,w:9},{n:"Electivire",t:"Electric",r:"Rare",tier:1,stage:3,w:9},{n:"Luxray",t:"Electric",r:"Rare",tier:1,stage:3,w:9},{n:"Eelektross",t:"Electric",r:"Rare",tier:1,stage:3,w:8},{n:"Jolteon",t:"Electric",r:"Epic",tier:1,stage:3,w:3},{n:"Zapdos",t:"Electric/Flying",r:"Legendary",tier:1,stage:1,w:1}
+  ],
+  t2_rock:[
+    {n:"Geodude",t:"Rock/Ground",r:"Common",tier:2,stage:1,w:120},{n:"Onix",t:"Rock/Ground",r:"Common",tier:2,stage:1,w:110},{n:"Rhyhorn",t:"Ground/Rock",r:"Common",tier:2,stage:1,w:110},{n:"Sudowoodo",t:"Rock",r:"Common",tier:2,stage:1,w:108},{n:"Nosepass",t:"Rock",r:"Common",tier:2,stage:1,w:105},{n:"Aron",t:"Steel/Rock",r:"Common",tier:2,stage:1,w:110},{n:"Cranidos",t:"Rock",r:"Common",tier:2,stage:1,w:105},{n:"Shieldon",t:"Rock/Steel",r:"Common",tier:2,stage:1,w:105},
+    {n:"Graveler",t:"Rock/Ground",r:"Uncommon",tier:2,stage:2,w:42},{n:"Steelix",t:"Steel/Ground",r:"Uncommon",tier:2,stage:2,w:38},{n:"Rhydon",t:"Ground/Rock",r:"Uncommon",tier:2,stage:2,w:40},{n:"Lairon",t:"Steel/Rock",r:"Uncommon",tier:2,stage:2,w:38},
+    {n:"Rampardos",t:"Rock",r:"Rare",tier:2,stage:3,w:12},{n:"Bastiodon",t:"Rock/Steel",r:"Rare",tier:2,stage:3,w:11},{n:"Golem",t:"Rock/Ground",r:"Rare",tier:2,stage:3,w:11},{n:"Aggron",t:"Steel/Rock",r:"Rare",tier:2,stage:3,w:10},{n:"Rhyperior",t:"Ground/Rock",r:"Rare",tier:2,stage:3,w:10},{n:"Larvitar",t:"Rock/Ground",r:"Rare",tier:2,stage:1,w:12},{n:"Pupitar",t:"Rock/Ground",r:"Rare",tier:2,stage:2,w:8},{n:"Tyranitar",t:"Rock/Dark",r:"Epic",tier:2,stage:3,w:3},{n:"Regirock",t:"Rock",r:"Legendary",tier:2,stage:1,w:1}
+  ],
+  t2_ground:[
+    {n:"Sandshrew",t:"Ground",r:"Common",tier:2,stage:1,w:120},{n:"Diglett",t:"Ground",r:"Common",tier:2,stage:1,w:115},{n:"Cubone",t:"Ground",r:"Common",tier:2,stage:1,w:110},{n:"Wooper",t:"Water/Ground",r:"Common",tier:2,stage:1,w:110},{n:"Phanpy",t:"Ground",r:"Common",tier:2,stage:1,w:110},{n:"Trapinch",t:"Ground",r:"Common",tier:2,stage:1,w:108},{n:"Gible",t:"Dragon/Ground",r:"Common",tier:2,stage:1,w:108},
+    {n:"Sandslash",t:"Ground",r:"Uncommon",tier:2,stage:2,w:42},{n:"Dugtrio",t:"Ground",r:"Uncommon",tier:2,stage:2,w:40},{n:"Marowak",t:"Ground",r:"Uncommon",tier:2,stage:2,w:38},{n:"Quagsire",t:"Water/Ground",r:"Uncommon",tier:2,stage:2,w:38},{n:"Donphan",t:"Ground",r:"Uncommon",tier:2,stage:2,w:38},{n:"Vibrava",t:"Ground/Dragon",r:"Uncommon",tier:2,stage:2,w:36},
+    {n:"Gabite",t:"Dragon/Ground",r:"Rare",tier:2,stage:2,w:14},{n:"Flygon",t:"Ground/Dragon",r:"Rare",tier:2,stage:3,w:10},{n:"Garchomp",t:"Dragon/Ground",r:"Epic",tier:2,stage:3,w:4},{n:"Groudon",t:"Ground",r:"Legendary",tier:2,stage:1,w:1}
+  ],
+  t2_ice:[
+    {n:"Seel",t:"Water",r:"Common",tier:2,stage:1,w:120},{n:"Shellder",t:"Water",r:"Common",tier:2,stage:1,w:115},{n:"Jynx",t:"Ice/Psychic",r:"Common",tier:2,stage:1,w:110},{n:"Sneasel",t:"Dark/Ice",r:"Common",tier:2,stage:1,w:110},{n:"Swinub",t:"Ice/Ground",r:"Common",tier:2,stage:1,w:110},{n:"Snorunt",t:"Ice",r:"Common",tier:2,stage:1,w:110},{n:"Snover",t:"Grass/Ice",r:"Common",tier:2,stage:1,w:108},{n:"Cubchoo",t:"Ice",r:"Common",tier:2,stage:1,w:108},
+    {n:"Dewgong",t:"Water/Ice",r:"Uncommon",tier:2,stage:2,w:42},{n:"Cloyster",t:"Water/Ice",r:"Uncommon",tier:2,stage:2,w:40},{n:"Weavile",t:"Dark/Ice",r:"Uncommon",tier:2,stage:2,w:38},{n:"Piloswine",t:"Ice/Ground",r:"Uncommon",tier:2,stage:2,w:38},{n:"Abomasnow",t:"Grass/Ice",r:"Uncommon",tier:2,stage:2,w:36},{n:"Beartic",t:"Ice",r:"Uncommon",tier:2,stage:2,w:36},
+    {n:"Lapras",t:"Water/Ice",r:"Rare",tier:2,stage:1,w:12},{n:"Mamoswine",t:"Ice/Ground",r:"Rare",tier:2,stage:3,w:10},{n:"Glaceon",t:"Ice",r:"Rare",tier:2,stage:2,w:10},{n:"Froslass",t:"Ice/Ghost",r:"Rare",tier:2,stage:2,w:9},{n:"Articuno",t:"Ice/Flying",r:"Legendary",tier:2,stage:1,w:1}
+  ],
+  t2_psychic:[
+    {n:"Abra",t:"Psychic",r:"Common",tier:2,stage:1,w:115},{n:"Slowpoke",t:"Water/Psychic",r:"Common",tier:2,stage:1,w:115},{n:"Drowzee",t:"Psychic",r:"Common",tier:2,stage:1,w:110},{n:"Exeggcute",t:"Grass/Psychic",r:"Common",tier:2,stage:1,w:108},{n:"Natu",t:"Psychic/Flying",r:"Common",tier:2,stage:1,w:108},{n:"Ralts",t:"Psychic/Fairy",r:"Common",tier:2,stage:1,w:110},{n:"Munna",t:"Psychic",r:"Common",tier:2,stage:1,w:108},{n:"Elgyem",t:"Psychic",r:"Common",tier:2,stage:1,w:108},
+    {n:"Kadabra",t:"Psychic",r:"Uncommon",tier:2,stage:2,w:42},{n:"Slowbro",t:"Water/Psychic",r:"Uncommon",tier:2,stage:2,w:40},{n:"Hypno",t:"Psychic",r:"Uncommon",tier:2,stage:2,w:38},{n:"Xatu",t:"Psychic/Flying",r:"Uncommon",tier:2,stage:2,w:38},{n:"Kirlia",t:"Psychic/Fairy",r:"Uncommon",tier:2,stage:2,w:38},{n:"Musharna",t:"Psychic",r:"Uncommon",tier:2,stage:2,w:36},{n:"Beheeyem",t:"Psychic",r:"Uncommon",tier:2,stage:2,w:36},
+    {n:"Alakazam",t:"Psychic",r:"Rare",tier:2,stage:3,w:11},{n:"Slowking",t:"Water/Psychic",r:"Rare",tier:2,stage:2,w:10},{n:"Gardevoir",t:"Psychic/Fairy",r:"Rare",tier:2,stage:3,w:10},{n:"Gallade",t:"Psychic/Fighting",r:"Rare",tier:2,stage:3,w:9},{n:"Espeon",t:"Psychic",r:"Epic",tier:2,stage:2,w:4},{n:"Mewtwo",t:"Psychic",r:"Legendary",tier:2,stage:1,w:1}
+  ],
+  t2_bug:[
+    {n:"Caterpie",t:"Bug",r:"Common",tier:2,stage:1,w:120},{n:"Weedle",t:"Bug/Poison",r:"Common",tier:2,stage:1,w:120},{n:"Paras",t:"Bug/Grass",r:"Common",tier:2,stage:1,w:115},{n:"Venonat",t:"Bug/Poison",r:"Common",tier:2,stage:1,w:115},{n:"Spinarak",t:"Bug/Poison",r:"Common",tier:2,stage:1,w:110},{n:"Wurmple",t:"Bug",r:"Common",tier:2,stage:1,w:110},{n:"Surskit",t:"Bug/Water",r:"Common",tier:2,stage:1,w:108},{n:"Sewaddle",t:"Bug/Grass",r:"Common",tier:2,stage:1,w:108},
+    {n:"Metapod",t:"Bug",r:"Uncommon",tier:2,stage:2,w:40},{n:"Kakuna",t:"Bug/Poison",r:"Uncommon",tier:2,stage:2,w:40},{n:"Parasect",t:"Bug/Grass",r:"Uncommon",tier:2,stage:2,w:38},{n:"Venomoth",t:"Bug/Poison",r:"Uncommon",tier:2,stage:2,w:38},{n:"Ariados",t:"Bug/Poison",r:"Uncommon",tier:2,stage:2,w:36},{n:"Beautifly",t:"Bug/Flying",r:"Uncommon",tier:2,stage:2,w:36},{n:"Leavanny",t:"Bug/Grass",r:"Uncommon",tier:2,stage:2,w:36},
+    {n:"Butterfree",t:"Bug/Flying",r:"Rare",tier:2,stage:3,w:11},{n:"Beedrill",t:"Bug/Poison",r:"Rare",tier:2,stage:3,w:11},{n:"Scyther",t:"Bug/Flying",r:"Rare",tier:2,stage:1,w:12},{n:"Scizor",t:"Bug/Steel",r:"Rare",tier:2,stage:2,w:10},{n:"Heracross",t:"Bug/Fighting",r:"Rare",tier:2,stage:1,w:11},{n:"Pinsir",t:"Bug",r:"Rare",tier:2,stage:1,w:11},{n:"Shedinja",t:"Bug/Ghost",r:"Epic",tier:2,stage:2,w:3}
+  ],
+  t3_ghost:[
+    {n:"Gastly",t:"Ghost/Poison",r:"Common",tier:3,stage:1,w:115},{n:"Misdreavus",t:"Ghost",r:"Common",tier:3,stage:1,w:110},{n:"Shuppet",t:"Ghost",r:"Common",tier:3,stage:1,w:110},{n:"Duskull",t:"Ghost",r:"Common",tier:3,stage:1,w:110},{n:"Drifloon",t:"Ghost/Flying",r:"Common",tier:3,stage:1,w:108},{n:"Litwick",t:"Ghost/Fire",r:"Common",tier:3,stage:1,w:108},{n:"Frillish",t:"Water/Ghost",r:"Common",tier:3,stage:1,w:108},
+    {n:"Haunter",t:"Ghost/Poison",r:"Uncommon",tier:3,stage:2,w:42},{n:"Mismagius",t:"Ghost",r:"Uncommon",tier:3,stage:2,w:38},{n:"Banette",t:"Ghost",r:"Uncommon",tier:3,stage:2,w:38},{n:"Dusclops",t:"Ghost",r:"Uncommon",tier:3,stage:2,w:38},{n:"Drifblim",t:"Ghost/Flying",r:"Uncommon",tier:3,stage:2,w:36},{n:"Lampent",t:"Ghost/Fire",r:"Uncommon",tier:3,stage:2,w:36},{n:"Jellicent",t:"Water/Ghost",r:"Uncommon",tier:3,stage:2,w:36},
+    {n:"Gengar",t:"Ghost/Poison",r:"Rare",tier:3,stage:3,w:11},{n:"Dusknoir",t:"Ghost",r:"Rare",tier:3,stage:3,w:10},{n:"Chandelure",t:"Ghost/Fire",r:"Rare",tier:3,stage:3,w:10},{n:"Aegislash",t:"Steel/Ghost",r:"Epic",tier:3,stage:3,w:4},{n:"Lunala",t:"Psychic/Ghost",r:"Legendary",tier:3,stage:1,w:1}
+  ],
+  t3_poison:[
+    {n:"Ekans",t:"Poison",r:"Common",tier:3,stage:1,w:115},{n:"Koffing",t:"Poison",r:"Common",tier:3,stage:1,w:115},{n:"Grimer",t:"Poison",r:"Common",tier:3,stage:1,w:115},{n:"Tentacool",t:"Water/Poison",r:"Common",tier:3,stage:1,w:110},{n:"Gulpin",t:"Poison",r:"Common",tier:3,stage:1,w:110},{n:"Croagunk",t:"Poison/Fighting",r:"Common",tier:3,stage:1,w:110},{n:"Trubbish",t:"Poison",r:"Common",tier:3,stage:1,w:108},
+    {n:"Arbok",t:"Poison",r:"Uncommon",tier:3,stage:2,w:42},{n:"Weezing",t:"Poison",r:"Uncommon",tier:3,stage:2,w:40},{n:"Muk",t:"Poison",r:"Uncommon",tier:3,stage:2,w:40},{n:"Tentacruel",t:"Water/Poison",r:"Uncommon",tier:3,stage:2,w:38},{n:"Swalot",t:"Poison",r:"Uncommon",tier:3,stage:2,w:38},{n:"Toxicroak",t:"Poison/Fighting",r:"Uncommon",tier:3,stage:2,w:38},{n:"Garbodor",t:"Poison",r:"Uncommon",tier:3,stage:2,w:36},
+    {n:"Nidoqueen",t:"Poison/Ground",r:"Rare",tier:3,stage:3,w:11},{n:"Nidoking",t:"Poison/Ground",r:"Rare",tier:3,stage:3,w:11},{n:"Roserade",t:"Grass/Poison",r:"Rare",tier:3,stage:3,w:10},{n:"Dragalge",t:"Poison/Dragon",r:"Rare",tier:3,stage:2,w:9},{n:"Toxapex",t:"Water/Poison",r:"Epic",tier:3,stage:2,w:4},{n:"Eternatus",t:"Poison/Dragon",r:"Legendary",tier:3,stage:1,w:1}
+  ],
+  t3_flying:[
+    {n:"Zubat",t:"Poison/Flying",r:"Common",tier:3,stage:1,w:115},{n:"Spearow",t:"Normal/Flying",r:"Common",tier:3,stage:1,w:115},{n:"Hoothoot",t:"Normal/Flying",r:"Common",tier:3,stage:1,w:110},{n:"Taillow",t:"Normal/Flying",r:"Common",tier:3,stage:1,w:110},{n:"Starly",t:"Normal/Flying",r:"Common",tier:3,stage:1,w:110},{n:"Pidove",t:"Normal/Flying",r:"Common",tier:3,stage:1,w:108},{n:"Fletchling",t:"Normal/Flying",r:"Common",tier:3,stage:1,w:108},
+    {n:"Golbat",t:"Poison/Flying",r:"Uncommon",tier:3,stage:2,w:42},{n:"Fearow",t:"Normal/Flying",r:"Uncommon",tier:3,stage:2,w:40},{n:"Noctowl",t:"Normal/Flying",r:"Uncommon",tier:3,stage:2,w:38},{n:"Swellow",t:"Normal/Flying",r:"Uncommon",tier:3,stage:2,w:38},{n:"Staravia",t:"Normal/Flying",r:"Uncommon",tier:3,stage:2,w:38},{n:"Tranquill",t:"Normal/Flying",r:"Uncommon",tier:3,stage:2,w:36},{n:"Fletchinder",t:"Fire/Flying",r:"Uncommon",tier:3,stage:2,w:36},
+    {n:"Crobat",t:"Poison/Flying",r:"Rare",tier:3,stage:3,w:11},{n:"Staraptor",t:"Normal/Flying",r:"Rare",tier:3,stage:3,w:11},{n:"Unfezant",t:"Normal/Flying",r:"Rare",tier:3,stage:3,w:10},{n:"Talonflame",t:"Fire/Flying",r:"Rare",tier:3,stage:3,w:10},{n:"Skarmory",t:"Steel/Flying",r:"Rare",tier:3,stage:1,w:11},{n:"Aerodactyl",t:"Rock/Flying",r:"Epic",tier:3,stage:1,w:4},{n:"Ho-Oh",t:"Fire/Flying",r:"Legendary",tier:3,stage:1,w:1}
+  ],
+  t3_fighting:[
+    {n:"Mankey",t:"Fighting",r:"Common",tier:3,stage:1,w:115},{n:"Machop",t:"Fighting",r:"Common",tier:3,stage:1,w:115},{n:"Hitmonlee",t:"Fighting",r:"Common",tier:3,stage:1,w:110},{n:"Hitmonchan",t:"Fighting",r:"Common",tier:3,stage:1,w:110},{n:"Makuhita",t:"Fighting",r:"Common",tier:3,stage:1,w:110},{n:"Meditite",t:"Fighting/Psychic",r:"Common",tier:3,stage:1,w:108},{n:"Timburr",t:"Fighting",r:"Common",tier:3,stage:1,w:108},{n:"Mienfoo",t:"Fighting",r:"Common",tier:3,stage:1,w:108},
+    {n:"Primeape",t:"Fighting",r:"Uncommon",tier:3,stage:2,w:42},{n:"Machoke",t:"Fighting",r:"Uncommon",tier:3,stage:2,w:42},{n:"Hariyama",t:"Fighting",r:"Uncommon",tier:3,stage:2,w:38},{n:"Medicham",t:"Fighting/Psychic",r:"Uncommon",tier:3,stage:2,w:38},{n:"Gurdurr",t:"Fighting",r:"Uncommon",tier:3,stage:2,w:38},{n:"Mienshao",t:"Fighting",r:"Uncommon",tier:3,stage:2,w:36},
+    {n:"Machamp",t:"Fighting",r:"Rare",tier:3,stage:3,w:11},{n:"Hitmontop",t:"Fighting",r:"Rare",tier:3,stage:2,w:10},{n:"Conkeldurr",t:"Fighting",r:"Rare",tier:3,stage:3,w:10},{n:"Lucario",t:"Fighting/Steel",r:"Epic",tier:3,stage:2,w:4},{n:"Marshadow",t:"Fighting/Ghost",r:"Legendary",tier:3,stage:1,w:1}
+  ],
+  t3_dragon:[
+    {n:"Dratini",t:"Dragon",r:"Common",tier:3,stage:1,w:110},{n:"Bagon",t:"Dragon",r:"Common",tier:3,stage:1,w:108},{n:"Gible",t:"Dragon/Ground",r:"Common",tier:3,stage:1,w:108},{n:"Axew",t:"Dragon",r:"Common",tier:3,stage:1,w:108},{n:"Deino",t:"Dark/Dragon",r:"Common",tier:3,stage:1,w:105},{n:"Goomy",t:"Dragon",r:"Common",tier:3,stage:1,w:105},
+    {n:"Dragonair",t:"Dragon",r:"Uncommon",tier:3,stage:2,w:42},{n:"Shelgon",t:"Dragon",r:"Uncommon",tier:3,stage:2,w:38},{n:"Gabite",t:"Dragon/Ground",r:"Uncommon",tier:3,stage:2,w:38},{n:"Fraxure",t:"Dragon",r:"Uncommon",tier:3,stage:2,w:38},{n:"Zweilous",t:"Dark/Dragon",r:"Uncommon",tier:3,stage:2,w:36},{n:"Sliggoo",t:"Dragon",r:"Uncommon",tier:3,stage:2,w:36},
+    {n:"Dragonite",t:"Dragon/Flying",r:"Rare",tier:3,stage:3,w:11},{n:"Salamence",t:"Dragon/Flying",r:"Rare",tier:3,stage:3,w:10},{n:"Haxorus",t:"Dragon",r:"Rare",tier:3,stage:3,w:10},{n:"Goodra",t:"Dragon",r:"Rare",tier:3,stage:3,w:9},{n:"Hydreigon",t:"Dark/Dragon",r:"Epic",tier:3,stage:3,w:4},{n:"Rayquaza",t:"Dragon/Flying",r:"Legendary",tier:3,stage:1,w:1}
+  ],
+  t4_steel:[
+    {n:"Beldum",t:"Steel/Psychic",r:"Common",tier:4,stage:1,w:110},{n:"Ferroseed",t:"Grass/Steel",r:"Common",tier:4,stage:1,w:108},{n:"Klink",t:"Steel",r:"Common",tier:4,stage:1,w:108},{n:"Pawniard",t:"Dark/Steel",r:"Common",tier:4,stage:1,w:108},{n:"Honedge",t:"Steel/Ghost",r:"Common",tier:4,stage:1,w:105},
+    {n:"Metang",t:"Steel/Psychic",r:"Uncommon",tier:4,stage:2,w:40},{n:"Ferrothorn",t:"Grass/Steel",r:"Uncommon",tier:4,stage:2,w:36},{n:"Klang",t:"Steel",r:"Uncommon",tier:4,stage:2,w:36},{n:"Bisharp",t:"Dark/Steel",r:"Uncommon",tier:4,stage:2,w:38},{n:"Doublade",t:"Steel/Ghost",r:"Uncommon",tier:4,stage:2,w:36},{n:"Steelix",t:"Steel/Ground",r:"Uncommon",tier:4,stage:2,w:38},
+    {n:"Scizor",t:"Bug/Steel",r:"Rare",tier:4,stage:2,w:12},{n:"Metagross",t:"Steel/Psychic",r:"Rare",tier:4,stage:3,w:10},{n:"Aggron",t:"Steel/Rock",r:"Rare",tier:4,stage:3,w:10},{n:"Klinklang",t:"Steel",r:"Rare",tier:4,stage:3,w:10},{n:"Aegislash",t:"Steel/Ghost",r:"Rare",tier:4,stage:3,w:9},{n:"Lucario",t:"Fighting/Steel",r:"Epic",tier:4,stage:2,w:4},{n:"Dialga",t:"Steel/Dragon",r:"Legendary",tier:4,stage:1,w:1},{n:"Registeel",t:"Steel",r:"Legendary",tier:4,stage:1,w:1}
+  ],
+  t4_dark:[
+    {n:"Murkrow",t:"Dark/Flying",r:"Common",tier:4,stage:1,w:110},{n:"Sneasel",t:"Dark/Ice",r:"Common",tier:4,stage:1,w:108},{n:"Houndour",t:"Dark/Fire",r:"Common",tier:4,stage:1,w:108},{n:"Poochyena",t:"Dark",r:"Common",tier:4,stage:1,w:108},{n:"Sableye",t:"Dark/Ghost",r:"Common",tier:4,stage:1,w:108},{n:"Absol",t:"Dark",r:"Common",tier:4,stage:1,w:105},{n:"Deino",t:"Dark/Dragon",r:"Common",tier:4,stage:1,w:105},
+    {n:"Honchkrow",t:"Dark/Flying",r:"Uncommon",tier:4,stage:2,w:40},{n:"Weavile",t:"Dark/Ice",r:"Uncommon",tier:4,stage:2,w:38},{n:"Houndoom",t:"Dark/Fire",r:"Uncommon",tier:4,stage:2,w:38},{n:"Mightyena",t:"Dark",r:"Uncommon",tier:4,stage:2,w:38},{n:"Zweilous",t:"Dark/Dragon",r:"Uncommon",tier:4,stage:2,w:36},
+    {n:"Umbreon",t:"Dark",r:"Rare",tier:4,stage:2,w:12},{n:"Tyranitar",t:"Rock/Dark",r:"Rare",tier:4,stage:3,w:10},{n:"Hydreigon",t:"Dark/Dragon",r:"Rare",tier:4,stage:3,w:9},{n:"Bisharp",t:"Dark/Steel",r:"Rare",tier:4,stage:2,w:10},{n:"Darkrai",t:"Dark",r:"Epic",tier:4,stage:1,w:4},{n:"Yveltal",t:"Dark/Flying",r:"Legendary",tier:4,stage:1,w:1}
+  ],
+  t4_fairy:[
+    {n:"Cleffa",t:"Fairy",r:"Common",tier:4,stage:1,w:110},{n:"Snubbull",t:"Fairy",r:"Common",tier:4,stage:1,w:108},{n:"Marill",t:"Water/Fairy",r:"Common",tier:4,stage:1,w:108},{n:"Spritzee",t:"Fairy",r:"Common",tier:4,stage:1,w:108},{n:"Swirlix",t:"Fairy",r:"Common",tier:4,stage:1,w:108},
+    {n:"Clefairy",t:"Fairy",r:"Uncommon",tier:4,stage:2,w:40},{n:"Granbull",t:"Fairy",r:"Uncommon",tier:4,stage:2,w:38},{n:"Azumarill",t:"Water/Fairy",r:"Uncommon",tier:4,stage:2,w:38},{n:"Aromatisse",t:"Fairy",r:"Uncommon",tier:4,stage:2,w:36},{n:"Slurpuff",t:"Fairy",r:"Uncommon",tier:4,stage:2,w:36},{n:"Sylveon",t:"Fairy",r:"Uncommon",tier:4,stage:2,w:38},
+    {n:"Clefable",t:"Fairy",r:"Rare",tier:4,stage:3,w:11},{n:"Togekiss",t:"Fairy/Flying",r:"Rare",tier:4,stage:3,w:10},{n:"Gardevoir",t:"Psychic/Fairy",r:"Rare",tier:4,stage:3,w:10},{n:"Xerneas",t:"Fairy",r:"Legendary",tier:4,stage:1,w:1},{n:"Zacian",t:"Fairy/Steel",r:"Legendary",tier:4,stage:1,w:1}
+  ],
+  t4_ancient:[
+    {n:"Kabuto",t:"Rock/Water",r:"Common",tier:4,stage:1,w:110},{n:"Omanyte",t:"Rock/Water",r:"Common",tier:4,stage:1,w:110},{n:"Lileep",t:"Rock/Grass",r:"Common",tier:4,stage:1,w:108},{n:"Anorith",t:"Rock/Bug",r:"Common",tier:4,stage:1,w:108},{n:"Shieldon",t:"Rock/Steel",r:"Common",tier:4,stage:1,w:108},{n:"Cranidos",t:"Rock",r:"Common",tier:4,stage:1,w:105},{n:"Tirtouga",t:"Water/Rock",r:"Common",tier:4,stage:1,w:105},{n:"Archen",t:"Rock/Flying",r:"Common",tier:4,stage:1,w:105},
+    {n:"Kabutops",t:"Rock/Water",r:"Uncommon",tier:4,stage:2,w:40},{n:"Omastar",t:"Rock/Water",r:"Uncommon",tier:4,stage:2,w:40},{n:"Cradily",t:"Rock/Grass",r:"Uncommon",tier:4,stage:2,w:38},{n:"Armaldo",t:"Rock/Bug",r:"Uncommon",tier:4,stage:2,w:38},{n:"Bastiodon",t:"Rock/Steel",r:"Uncommon",tier:4,stage:2,w:36},
+    {n:"Carracosta",t:"Water/Rock",r:"Rare",tier:4,stage:2,w:11},{n:"Archeops",t:"Rock/Flying",r:"Rare",tier:4,stage:2,w:11},{n:"Aerodactyl",t:"Rock/Flying",r:"Rare",tier:4,stage:1,w:11},{n:"Aurorus",t:"Rock/Ice",r:"Rare",tier:4,stage:2,w:9},{n:"Tyrantrum",t:"Rock/Dragon",r:"Epic",tier:4,stage:2,w:4},{n:"Zygarde",t:"Dragon/Ground",r:"Legendary",tier:4,stage:1,w:1}
+  ],
+  t4_shadow:[
+    {n:"Shadow Charmander",t:"Fire",r:"Common",tier:4,stage:1,w:110},{n:"Shadow Bulbasaur",t:"Grass",r:"Common",tier:4,stage:1,w:110},{n:"Shadow Squirtle",t:"Water",r:"Common",tier:4,stage:1,w:110},{n:"Shadow Eevee",t:"Normal",r:"Common",tier:4,stage:1,w:108},{n:"Shadow Pikachu",t:"Electric",r:"Common",tier:4,stage:1,w:108},
+    {n:"Shadow Charmeleon",t:"Fire",r:"Uncommon",tier:4,stage:2,w:40},{n:"Shadow Ivysaur",t:"Grass",r:"Uncommon",tier:4,stage:2,w:38},{n:"Shadow Wartortle",t:"Water",r:"Uncommon",tier:4,stage:2,w:38},{n:"Shadow Vaporeon",t:"Water",r:"Uncommon",tier:4,stage:2,w:36},{n:"Shadow Jolteon",t:"Electric",r:"Uncommon",tier:4,stage:2,w:36},
+    {n:"Shadow Charizard",t:"Fire/Flying",r:"Rare",tier:4,stage:3,w:11},{n:"Shadow Venusaur",t:"Grass/Poison",r:"Rare",tier:4,stage:3,w:10},{n:"Shadow Blastoise",t:"Water",r:"Rare",tier:4,stage:3,w:10},{n:"Shadow Mewtwo",t:"Psychic",r:"Epic",tier:4,stage:1,w:4},{n:"Shadow Lugia",t:"Psychic/Flying",r:"Epic",tier:4,stage:1,w:3},{n:"Shadow Entei",t:"Fire",r:"Legendary",tier:4,stage:1,w:1},{n:"Shadow Raikou",t:"Electric",r:"Legendary",tier:4,stage:1,w:1},{n:"Shadow Suicune",t:"Water",r:"Legendary",tier:4,stage:1,w:1}
+  ],
+  t5_mythic:[
+    {n:"Happiny",t:"Normal",r:"Common",tier:5,stage:1,w:110},{n:"Togepi",t:"Fairy",r:"Common",tier:5,stage:1,w:108},{n:"Mime Jr.",t:"Psychic/Fairy",r:"Common",tier:5,stage:1,w:108},{n:"Munchlax",t:"Normal",r:"Common",tier:5,stage:1,w:108},{n:"Bonsly",t:"Rock",r:"Common",tier:5,stage:1,w:105},
+    {n:"Chansey",t:"Normal",r:"Uncommon",tier:5,stage:2,w:40},{n:"Togetic",t:"Fairy/Flying",r:"Uncommon",tier:5,stage:2,w:38},{n:"Mr. Mime",t:"Psychic/Fairy",r:"Uncommon",tier:5,stage:2,w:38},{n:"Snorlax",t:"Normal",r:"Uncommon",tier:5,stage:2,w:38},
+    {n:"Blissey",t:"Normal",r:"Rare",tier:5,stage:3,w:12},{n:"Togekiss",t:"Fairy/Flying",r:"Rare",tier:5,stage:3,w:10},{n:"Mew",t:"Psychic",r:"Legendary",tier:5,stage:1,w:2},{n:"Celebi",t:"Psychic/Grass",r:"Legendary",tier:5,stage:1,w:2},{n:"Jirachi",t:"Steel/Psychic",r:"Legendary",tier:5,stage:1,w:2},{n:"Manaphy",t:"Water",r:"Legendary",tier:5,stage:1,w:2},{n:"Shaymin",t:"Grass",r:"Legendary",tier:5,stage:1,w:1},{n:"Victini",t:"Psychic/Fire",r:"Legendary",tier:5,stage:1,w:1}
+  ],
+  t5_cosmic:[
+    {n:"Cleffa",t:"Fairy",r:"Common",tier:5,stage:1,w:108},{n:"Cosmog",t:"Psychic",r:"Common",tier:5,stage:1,w:108},{n:"Staryu",t:"Water",r:"Common",tier:5,stage:1,w:108},
+    {n:"Starmie",t:"Water/Psychic",r:"Uncommon",tier:5,stage:2,w:40},{n:"Cosmoem",t:"Psychic",r:"Uncommon",tier:5,stage:2,w:36},{n:"Solrock",t:"Rock/Psychic",r:"Uncommon",tier:5,stage:1,w:38},{n:"Lunatone",t:"Rock/Psychic",r:"Uncommon",tier:5,stage:1,w:38},
+    {n:"Deoxys",t:"Psychic",r:"Rare",tier:5,stage:1,w:12},{n:"Cresselia",t:"Psychic",r:"Rare",tier:5,stage:1,w:11},{n:"Palkia",t:"Water/Dragon",r:"Rare",tier:5,stage:1,w:10},{n:"Giratina",t:"Ghost/Dragon",r:"Epic",tier:5,stage:1,w:4},{n:"Arceus",t:"Normal",r:"Legendary",tier:5,stage:1,w:1},{n:"Necrozma",t:"Psychic",r:"Legendary",tier:5,stage:1,w:1}
+  ],
+  t5_divine:[
+    {n:"Larvesta",t:"Bug/Fire",r:"Common",tier:5,stage:1,w:110},{n:"Fletchling",t:"Normal/Flying",r:"Common",tier:5,stage:1,w:108},{n:"Ponyta",t:"Fire",r:"Common",tier:5,stage:1,w:108},
+    {n:"Volcarona",t:"Bug/Fire",r:"Uncommon",tier:5,stage:2,w:38},{n:"Rapidash",t:"Fire",r:"Uncommon",tier:5,stage:2,w:38},
+    {n:"Entei",t:"Fire",r:"Rare",tier:5,stage:1,w:12},{n:"Raikou",t:"Electric",r:"Rare",tier:5,stage:1,w:12},{n:"Suicune",t:"Water",r:"Rare",tier:5,stage:1,w:12},{n:"Lugia",t:"Psychic/Flying",r:"Epic",tier:5,stage:1,w:4},{n:"Ho-Oh",t:"Fire/Flying",r:"Epic",tier:5,stage:1,w:4},{n:"Solgaleo",t:"Psychic/Steel",r:"Legendary",tier:5,stage:1,w:2},{n:"Lunala",t:"Psychic/Ghost",r:"Legendary",tier:5,stage:1,w:1},{n:"Tapu Lele",t:"Psychic/Fairy",r:"Legendary",tier:5,stage:1,w:1}
+  ],
+  t5_time:[
+    {n:"Slowpoke",t:"Psychic",r:"Common",tier:5,stage:1,w:108},{n:"Eevee",t:"Normal",r:"Common",tier:5,stage:1,w:108},{n:"Ditto",t:"Normal",r:"Common",tier:5,stage:1,w:108},{n:"Porygon",t:"Normal",r:"Uncommon",tier:5,stage:1,w:40},
+    {n:"Porygon2",t:"Normal",r:"Uncommon",tier:5,stage:2,w:36},{n:"Dialga",t:"Steel/Dragon",r:"Rare",tier:5,stage:1,w:12},{n:"Celebi",t:"Psychic/Grass",r:"Rare",tier:5,stage:1,w:11},{n:"Porygon-Z",t:"Normal",r:"Rare",tier:5,stage:3,w:10},{n:"Zarude",t:"Dark/Grass",r:"Rare",tier:5,stage:1,w:10},{n:"Zeraora",t:"Electric",r:"Epic",tier:5,stage:1,w:4},{n:"Marshadow",t:"Fighting/Ghost",r:"Epic",tier:5,stage:1,w:3},{n:"Volcanion",t:"Fire/Water",r:"Legendary",tier:5,stage:1,w:2},{n:"Hoopa",t:"Psychic/Ghost",r:"Legendary",tier:5,stage:1,w:1}
+  ],
+  t5_chaos:[
+    {n:"Larvitar",t:"Rock/Ground",r:"Common",tier:5,stage:1,w:108},{n:"Deino",t:"Dark/Dragon",r:"Common",tier:5,stage:1,w:108},{n:"Dreepy",t:"Dragon/Ghost",r:"Common",tier:5,stage:1,w:108},
+    {n:"Zweilous",t:"Dark/Dragon",r:"Uncommon",tier:5,stage:2,w:38},{n:"Drakloak",t:"Dragon/Ghost",r:"Uncommon",tier:5,stage:2,w:36},
+    {n:"Tyranitar",t:"Rock/Dark",r:"Rare",tier:5,stage:3,w:12},{n:"Hydreigon",t:"Dark/Dragon",r:"Rare",tier:5,stage:3,w:11},{n:"Dragapult",t:"Dragon/Ghost",r:"Rare",tier:5,stage:3,w:10},{n:"Mewtwo",t:"Psychic",r:"Epic",tier:5,stage:1,w:4},{n:"Kyogre",t:"Water",r:"Epic",tier:5,stage:1,w:3},{n:"Groudon",t:"Ground",r:"Epic",tier:5,stage:1,w:3},{n:"Rayquaza",t:"Dragon/Flying",r:"Legendary",tier:5,stage:1,w:2},{n:"Eternatus",t:"Poison/Dragon",r:"Legendary",tier:5,stage:1,w:1}
+  ]
+};
+
+const ALL_RIVAL=[
+  {n:"Rival Magikarp",dex:129,t:"Water",tier:1},{n:"Rival Rattata",dex:19,t:"Normal",tier:1},{n:"Rival Caterpie",dex:10,t:"Bug",tier:1},{n:"Rival Pidgey",dex:16,t:"Flying",tier:1},{n:"Rival Ekans",dex:23,t:"Poison",tier:1},
+  {n:"Rival Geodude",dex:74,t:"Rock",tier:2},{n:"Rival Psyduck",dex:54,t:"Water",tier:2},{n:"Rival Growlithe",dex:58,t:"Fire",tier:2},{n:"Rival Cubone",dex:104,t:"Ground",tier:2},{n:"Rival Slowpoke",dex:79,t:"Psychic",tier:2},
+  {n:"Rival Gengar",dex:94,t:"Ghost",tier:3},{n:"Rival Machamp",dex:68,t:"Fighting",tier:3},{n:"Rival Aerodactyl",dex:142,t:"Rock/Flying",tier:3},{n:"Rival Lapras",dex:131,t:"Water/Ice",tier:3},{n:"Rival Dragonite",dex:149,t:"Dragon",tier:3},
+  {n:"Rival Tyranitar",dex:248,t:"Rock/Dark",tier:4},{n:"Rival Metagross",dex:376,t:"Steel/Psychic",tier:4},{n:"Rival Garchomp",dex:445,t:"Dragon/Ground",tier:4},{n:"Rival Darkrai",dex:491,t:"Dark",tier:4},{n:"Rival Zacian",dex:888,t:"Fairy/Steel",tier:4},
+  {n:"Rival Mewtwo",dex:150,t:"Psychic",tier:5},{n:"Rival Rayquaza",dex:384,t:"Dragon",tier:5},{n:"Rival Arceus",dex:493,t:"Normal",tier:5},{n:"Rival Kyogre",dex:382,t:"Water",tier:5},{n:"Rival Giratina",dex:487,t:"Ghost/Dragon",tier:5}
+];
+
+function pickRival(){
+  const roll=Math.random();
+  let pool;
+  if(roll<.40)pool=ALL_RIVAL.filter(r=>r.tier===1);
+  else if(roll<.65)pool=ALL_RIVAL.filter(r=>r.tier===2);
+  else if(roll<.82)pool=ALL_RIVAL.filter(r=>r.tier===3);
+  else if(roll<.93)pool=ALL_RIVAL.filter(r=>r.tier===4);
+  else pool=ALL_RIVAL.filter(r=>r.tier===5);
+  const base=pool[Math.floor(Math.random()*pool.length)];
+  const s=rollStats(base.tier,2);
+  const lbl=base.tier<=2?'Easy':base.tier===3?'Medium':base.tier===4?'Hard':'Brutal';
+  const cls=base.tier<=2?'rb-easy':base.tier===3?'rb-medium':'rb-hard';
+  return{...base,...s,maxHp:s.hp,label:lbl,labelClass:cls,img:`${SPRITE_BASE}${base.dex}.png`};
+}
+
+let balls=100,collection={},battleState=null,selectedMon=null;
+
+function pickPokemon(pool){
+  const list=P[pool];
+  const tot=list.reduce((a,m)=>a+m.w,0);
+  let r=Math.random()*tot;
+  for(let i=0;i<list.length;i++){r-=list[i].w;if(r<=0)return list[i];}
+  return list[list.length-1];
+}
+
+function openPack(pack){
+  if(balls<pack.cost){showToast('Not enough Pokéballs!');return;}
+  balls-=pack.cost;updateBalls();
+  const base=pickPokemon(pack.pool);
+  const stats=rollStats(base.tier,base.stage);
+  const mon={...base,...stats};
+  const isNew=!collection[mon.n];
+  if(!collection[mon.n]||stats.hp>collection[mon.n].hp){collection[mon.n]={...mon,count:(collection[mon.n]?.count||0)+1};}
+  else{collection[mon.n].count++;}
+  document.getElementById('pack-opened-label').textContent='From: '+pack.name;
+  const img=document.getElementById('mon-img');
+  img.src=spriteUrl(mon.n);img.alt=mon.n;
+  document.getElementById('mon-name').textContent=mon.n;
+  document.getElementById('mon-type').textContent=mon.t;
+  document.getElementById('mon-stage-wrap').innerHTML='<span class="modal-stage-badge">Stage '+mon.stage+(mon.stage===1?' — Base':mon.stage===2?' — Evo 1':' — Final')+'</span>';
+  document.getElementById('mon-stats').innerHTML='<div class="stat-box"><b>'+mon.hp+'</b><span>HP</span></div><div class="stat-box"><b>'+mon.atk+'</b><span>ATK</span></div>';
+  const rb=document.getElementById('mon-rarity-badge');rb.textContent=mon.r;rb.className='pack-rarity r-'+mon.r.toLowerCase();
+  document.getElementById('mon-dupe').textContent=isNew?'✨ New Pokémon!':'Already in collection';
+  document.getElementById('pack-modal').classList.add('show');
+}
+
+function closePackModal(){
+  document.getElementById('pack-modal').classList.remove('show');
+  const active=document.querySelector('.section.active');
+  if(active&&active.id==='collection')renderCollection();
+  if(active&&active.id==='battle')renderBattle();
+}
+
+function updateBalls(){document.getElementById('ball-count').textContent=balls;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),2500);}
+
+function showTab(tab,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');btn.classList.add('active');
+  if(tab==='collection')renderCollection();
+  if(tab==='battle')renderBattle();
+  if(tab==='energy')renderEnergyStore();
+}
+
+function ballSVGInline(size=14){
+  return`<svg width="${size}" height="${size}" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:2px"><circle cx="20" cy="20" r="18" fill="#e03c3c" stroke="#222" stroke-width="3"/><path d="M2 20 Q2 38 20 38 Q38 38 38 20Z" fill="white"/><line x1="2" y1="20" x2="38" y2="20" stroke="#222" stroke-width="3"/><circle cx="20" cy="20" r="5" fill="white" stroke="#222" stroke-width="2.5"/><circle cx="20" cy="20" r="2.5" fill="#222"/></svg>`;
+}
+
+function renderShop(){
+  const shop=document.getElementById('shop');shop.innerHTML='';
+  const note=document.createElement('div');note.className='info-bar';
+  note.innerHTML='Stats are <b>randomised</b> per pull. T1 max 100HP · T2 max 200 · T3 max 300 · T4 max 400 · T5 max 500. Stage evos get a bonus. <b>Win</b> → +20 balls · <b>Lose</b> → −10 balls · <b>Flee</b> → always free.';
+  shop.appendChild(note);
+  TIERS.forEach(tier=>{
+    const lbl=document.createElement('div');lbl.className='tier-label';
+    lbl.innerHTML='<span style="padding:2px 9px;border-radius:99px;font-size:11px;background:'+tier.color+';color:'+tier.text+';font-weight:600">'+tier.name+'</span><span style="color:#888">'+tier.packs[0].cost+' Pokéballs / pack</span>';
+    shop.appendChild(lbl);
+    const grid=document.createElement('div');grid.className='pack-grid';
+    tier.packs.forEach(pack=>{
+      const pool=P[pack.pool]||[];
+      const tot=pool.reduce((a,m)=>a+m.w,0);
+      const sr=pool.reduce((acc,m)=>{acc[m.stage]=(acc[m.stage]||0)+m.w;return acc;},{});
+      const p1=tot?Math.round((sr[1]||0)/tot*100):0;
+      const p2=tot?Math.round((sr[2]||0)/tot*100):0;
+      const p3=tot?Math.round((sr[3]||0)/tot*100):0;
+      const c=document.createElement('div');c.className='pack-card';
+      c.innerHTML=`<div class="pack-symbol">${packSVG(pack.symbol)}</div><div class="pack-name">${pack.name}</div><div class="pack-cost">${ballSVGInline()}${pack.cost}</div><span class="pack-rarity r-${tier.rarity.toLowerCase()}">${tier.rarity}</span><div class="rates-row"><span>S1 ${p1}%</span><span>S2 ${p2}%</span>${p3>0?'<span>S3 '+p3+'%</span>':''}</div>`;
+      c.onclick=()=>openPack(pack);grid.appendChild(c);
+    });
+    shop.appendChild(grid);
+  });
+}
+
+function renderCollection(){
+  const col=document.getElementById('collection');
+  const keys=Object.keys(collection);
+  if(!keys.length){col.innerHTML='<div class="empty-state">No Pokémon yet.<br>Open packs to start collecting!</div>';return;}
+  const byR={Legendary:[],Epic:[],Rare:[],Uncommon:[],Common:[]};
+  keys.forEach(k=>{const m=collection[k];(byR[m.r]||(byR[m.r]=[])).push(m);});
+  col.innerHTML='<div style="font-size:13px;color:#888;margin-bottom:1rem;font-weight:500">'+keys.length+' Pokémon collected</div>';
+  ['Legendary','Epic','Rare','Uncommon','Common'].forEach(r=>{
+    const list=byR[r];if(!list||!list.length)return;
+    const h=document.createElement('div');h.className='tier-label';h.style.marginBottom='8px';
+    h.innerHTML='<span class="pack-rarity r-'+r.toLowerCase()+'" style="margin:0">'+r+'</span>';
+    col.appendChild(h);
+    const grid=document.createElement('div');grid.className='collection-grid';grid.style.marginBottom='1.25rem';
+    list.forEach(m=>{
+      const c=document.createElement('div');c.className='mon-card';
+      c.innerHTML='<img src="'+spriteUrl(m.n)+'" alt="'+m.n+'" onerror="this.src=\'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png\'"><div class="name">'+m.n+'</div><div class="cnt">'+m.hp+'HP · '+m.atk+'ATK'+(m.count>1?' · x'+m.count:'')+'</div>';
+      grid.appendChild(c);
+    });
+    col.appendChild(grid);
+  });
+}
+
+function isLosingBadly(){return battleState&&(battleState.player.curHp/battleState.player.hp)<0.25;}
+
+function renderBattle(){
+  const b=document.getElementById('battle');
+  const myMons=Object.values(collection);
+  if(!myMons.length){b.innerHTML='<div class="empty-state" style="padding:3rem 1rem"><div style="font-size:40px;margin-bottom:1rem">⚔️</div>You need Pokémon to battle!<br><span style="font-size:13px;color:#aaa">Open some packs first.</span></div>';return;}
+  if(!battleState)renderPickScreen(b,myMons);
+  else renderBattleScreen(b);
+}
+
+function renderPickScreen(b,myMons){
+  b.innerHTML='';
+  const tip=document.createElement('div');tip.className='info-bar';
+  tip.innerHTML='<span style="color:#27500a;font-weight:600">Win</span> &nbsp;|&nbsp; +20 Pokéballs &nbsp;|&nbsp; <span style="color:#791f1f;font-weight:600">Lose</span> &nbsp;|&nbsp; −10 Pokéballs &nbsp;|&nbsp; <span style="color:#27500a;font-weight:600">Flee</span> &nbsp;|&nbsp; always free';
+  b.appendChild(tip);
+  const lbl=document.createElement('div');lbl.style.cssText='font-size:14px;color:#888;margin-bottom:.75rem;font-weight:500';lbl.textContent='Choose your fighter:';
+  b.appendChild(lbl);
+  const grid=document.createElement('div');grid.className='pick-grid';
+  myMons.forEach(m=>{
+    const c=document.createElement('div');c.className='pick-mon'+(selectedMon&&selectedMon.n===m.n?' selected':'');
+    c.innerHTML='<img src="'+spriteUrl(m.n)+'" alt="'+m.n+'" onerror="this.src=\'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png\'"><div class="name">'+m.n+'</div><div style="font-size:10px;color:#aaa;margin-top:2px">'+m.hp+'HP · '+m.atk+'ATK</div>';
+    c.onclick=()=>{selectedMon=m;renderBattle();};
+    grid.appendChild(c);
+  });
+  b.appendChild(grid);
+  const btn=document.createElement('button');
+  btn.style.cssText='width:100%;padding:11px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;border:1px solid #ddd;background:#f5f5f0;color:#1a1a1a;margin-top:.75rem';
+  btn.textContent=selectedMon?'Battle with '+selectedMon.n+'!':'Select a Pokémon to battle';
+  btn.disabled=!selectedMon;btn.onclick=startBattle;b.appendChild(btn);
+}
+
+
+// ── Attack definitions per pokemon type ────────────────────────────────────
+// Each move: {name, dmgMult (×player.atk), energy (0=free), desc}
+const TYPE_MOVES={
+  "Fire":[
+    {name:"Ember",dmgMult:.6,energy:0,desc:"A weak flame. Free."},
+    {name:"Flame Charge",dmgMult:1.0,energy:0,desc:"Charges with fire. Free."},
+    {name:"Fire Spin",dmgMult:1.6,energy:15,desc:"Traps foe in flames."},
+    {name:"Flamethrower",dmgMult:2.2,energy:25,desc:"Powerful fire stream."},
+    {name:"Fire Blast",dmgMult:3.0,energy:40,desc:"Massive firestorm."}
+  ],
+  "Water":[
+    {name:"Water Gun",dmgMult:.6,energy:0,desc:"Shoots water. Free."},
+    {name:"Bubble",dmgMult:1.0,energy:0,desc:"Bubbles hit foe. Free."},
+    {name:"Water Pulse",dmgMult:1.6,energy:15,desc:"Pulsing water wave."},
+    {name:"Hydro Pump",dmgMult:2.4,energy:25,desc:"Blasts water at high speed."},
+    {name:"Surf",dmgMult:3.0,energy:40,desc:"Huge tidal wave."}
+  ],
+  "Grass":[
+    {name:"Vine Whip",dmgMult:.6,energy:0,desc:"Lashes with vines. Free."},
+    {name:"Razor Leaf",dmgMult:1.0,energy:0,desc:"Sharp leaves. Free."},
+    {name:"Seed Bomb",dmgMult:1.6,energy:15,desc:"Exploding seeds."},
+    {name:"Solar Beam",dmgMult:2.4,energy:30,desc:"Channels solar energy."},
+    {name:"Leaf Storm",dmgMult:3.0,energy:40,desc:"Violent leaf tornado."}
+  ],
+  "Electric":[
+    {name:"Thunder Shock",dmgMult:.6,energy:0,desc:"Weak static. Free."},
+    {name:"Spark",dmgMult:1.0,energy:0,desc:"Electric dash. Free."},
+    {name:"Charge Beam",dmgMult:1.6,energy:15,desc:"Focused energy beam."},
+    {name:"Thunderbolt",dmgMult:2.2,energy:25,desc:"Powerful lightning bolt."},
+    {name:"Thunder",dmgMult:3.0,energy:40,desc:"Calls down a thunderstrike."}
+  ],
+  "Psychic":[
+    {name:"Confusion",dmgMult:.6,energy:0,desc:"Disorienting pulse. Free."},
+    {name:"Zen Headbutt",dmgMult:1.0,energy:0,desc:"Psychic headbutt. Free."},
+    {name:"Psybeam",dmgMult:1.6,energy:15,desc:"Odd psychic ray."},
+    {name:"Psychic",dmgMult:2.2,energy:25,desc:"Powerful mind attack."},
+    {name:"Future Sight",dmgMult:3.0,energy:40,desc:"Sees the future — hurts!"}
+  ],
+  "Ice":[
+    {name:"Powder Snow",dmgMult:.6,energy:0,desc:"Icy breath. Free."},
+    {name:"Frost Breath",dmgMult:1.0,energy:0,desc:"Freezing breath. Free."},
+    {name:"Ice Shard",dmgMult:1.6,energy:15,desc:"Sharp ice projectile."},
+    {name:"Ice Beam",dmgMult:2.2,energy:25,desc:"Freezing energy beam."},
+    {name:"Blizzard",dmgMult:3.0,energy:40,desc:"Raging snowstorm."}
+  ],
+  "Dragon":[
+    {name:"Dragon Breath",dmgMult:.7,energy:0,desc:"Draconic breath. Free."},
+    {name:"Dragon Tail",dmgMult:1.0,energy:0,desc:"Whips with tail. Free."},
+    {name:"Dragon Pulse",dmgMult:1.7,energy:15,desc:"Energy orb of power."},
+    {name:"Dragon Claw",dmgMult:2.2,energy:25,desc:"Rakes with dragon claws."},
+    {name:"Outrage",dmgMult:3.2,energy:45,desc:"Uncontrolled draconic fury."}
+  ],
+  "Ghost":[
+    {name:"Astonish",dmgMult:.6,energy:0,desc:"Startles foe. Free."},
+    {name:"Shadow Sneak",dmgMult:1.0,energy:0,desc:"Shadow strike. Free."},
+    {name:"Hex",dmgMult:1.6,energy:15,desc:"Curses with hex energy."},
+    {name:"Shadow Ball",dmgMult:2.2,energy:25,desc:"Hurl ghostly orb."},
+    {name:"Phantom Force",dmgMult:3.0,energy:40,desc:"Vanishes then strikes."}
+  ],
+  "Dark":[
+    {name:"Bite",dmgMult:.6,energy:0,desc:"Sharp bite. Free."},
+    {name:"Feint Attack",dmgMult:1.0,energy:0,desc:"Deceptive strike. Free."},
+    {name:"Crunch",dmgMult:1.6,energy:15,desc:"Crushes with dark power."},
+    {name:"Dark Pulse",dmgMult:2.2,energy:25,desc:"Wave of dark energy."},
+    {name:"Night Daze",dmgMult:3.0,energy:40,desc:"Explosive dark burst."}
+  ],
+  "Fighting":[
+    {name:"Tackle",dmgMult:.6,energy:0,desc:"Running tackle. Free."},
+    {name:"Low Kick",dmgMult:1.0,energy:0,desc:"Trip attack. Free."},
+    {name:"Brick Break",dmgMult:1.6,energy:15,desc:"Breaks through defences."},
+    {name:"Close Combat",dmgMult:2.4,energy:25,desc:"All-out brawl."},
+    {name:"Superpower",dmgMult:3.2,energy:45,desc:"Raw overwhelming force."}
+  ],
+  "Rock":[
+    {name:"Rock Throw",dmgMult:.6,energy:0,desc:"Hurls a rock. Free."},
+    {name:"Rollout",dmgMult:1.0,energy:0,desc:"Rolls into foe. Free."},
+    {name:"Rock Blast",dmgMult:1.6,energy:15,desc:"Multi-rock barrage."},
+    {name:"Stone Edge",dmgMult:2.2,energy:25,desc:"Sharp stone pillars."},
+    {name:"Rock Wrecker",dmgMult:3.0,energy:40,desc:"Launches massive boulder."}
+  ],
+  "Ground":[
+    {name:"Mud Slap",dmgMult:.6,energy:0,desc:"Flings mud. Free."},
+    {name:"Sand Attack",dmgMult:1.0,energy:0,desc:"Throws sand. Free."},
+    {name:"Bulldoze",dmgMult:1.6,energy:15,desc:"Stomps the ground."},
+    {name:"Earthquake",dmgMult:2.4,energy:30,desc:"Shakes the earth."},
+    {name:"Fissure",dmgMult:3.2,energy:45,desc:"Opens a ground chasm."}
+  ],
+  "Poison":[
+    {name:"Acid",dmgMult:.6,energy:0,desc:"Sprays acid. Free."},
+    {name:"Poison Sting",dmgMult:1.0,energy:0,desc:"Poisonous sting. Free."},
+    {name:"Sludge",dmgMult:1.6,energy:15,desc:"Flings toxic sludge."},
+    {name:"Sludge Bomb",dmgMult:2.2,energy:25,desc:"Explosive toxic blast."},
+    {name:"Gunk Shot",dmgMult:3.0,energy:40,desc:"Fires a garbage missile."}
+  ],
+  "Flying":[
+    {name:"Gust",dmgMult:.6,energy:0,desc:"Weak wind gust. Free."},
+    {name:"Air Cutter",dmgMult:1.0,energy:0,desc:"Slicing air blade. Free."},
+    {name:"Aerial Ace",dmgMult:1.6,energy:15,desc:"Swift aerial strike."},
+    {name:"Air Slash",dmgMult:2.2,energy:25,desc:"Slashes with wind blade."},
+    {name:"Hurricane",dmgMult:3.0,energy:40,desc:"Massive wind vortex."}
+  ],
+  "Steel":[
+    {name:"Metal Claw",dmgMult:.6,energy:0,desc:"Steel claws. Free."},
+    {name:"Iron Tail",dmgMult:1.0,energy:0,desc:"Hard steel tail. Free."},
+    {name:"Flash Cannon",dmgMult:1.7,energy:15,desc:"Fires a steel beam."},
+    {name:"Iron Head",dmgMult:2.2,energy:25,desc:"Charges with steel head."},
+    {name:"Meteor Mash",dmgMult:3.0,energy:40,desc:"Meteor-powered punch."}
+  ],
+  "Fairy":[
+    {name:"Disarming Voice",dmgMult:.6,energy:0,desc:"Cute cry. Free."},
+    {name:"Baby-Doll Eyes",dmgMult:1.0,energy:0,desc:"Adorable glare. Free."},
+    {name:"Dazzling Gleam",dmgMult:1.7,energy:15,desc:"Bright fairy flash."},
+    {name:"Moonblast",dmgMult:2.4,energy:25,desc:"Calls down moon power."},
+    {name:"Sparkling Aria",dmgMult:3.0,energy:40,desc:"Singing attack of light."}
+  ],
+  "Normal":[
+    {name:"Scratch",dmgMult:.6,energy:0,desc:"Basic scratch. Free."},
+    {name:"Tackle",dmgMult:1.0,energy:0,desc:"Running tackle. Free."},
+    {name:"Body Slam",dmgMult:1.6,energy:15,desc:"Full body slam."},
+    {name:"Hyper Fang",dmgMult:2.2,energy:25,desc:"Bites with full force."},
+    {name:"Hyper Beam",dmgMult:3.2,energy:45,desc:"Ultimate energy blast."}
+  ],
+  "Bug":[
+    {name:"Bug Bite",dmgMult:.6,energy:0,desc:"Gnaws on foe. Free."},
+    {name:"String Shot",dmgMult:1.0,energy:0,desc:"Wraps in silk. Free."},
+    {name:"X-Scissor",dmgMult:1.6,energy:15,desc:"Scissor cross-slash."},
+    {name:"Signal Beam",dmgMult:2.2,energy:25,desc:"Pulsing bug energy."},
+    {name:"Bug Buzz",dmgMult:3.0,energy:40,desc:"Powerful vibration."}
+  ]
+};
+
+function getMovesForMon(mon){
+  // Use primary type (before /)
+  const primaryType=mon.t.split('/')[0].trim();
+  const moves=TYPE_MOVES[primaryType]||TYPE_MOVES["Normal"];
+  return moves;
+}
+
+function getRivalMove(rival){
+  // Rivals always use a free or low-energy move (they don't have energy constraints)
+  const moves=TYPE_MOVES[rival.t.split('/')[0].trim()]||TYPE_MOVES["Normal"];
+  // Rivals randomly pick any move but weighted toward free ones
+  const roll=Math.random();
+  if(roll<0.5)return moves[0]; // free move 1
+  if(roll<0.75)return moves[1]; // free move 2
+  if(roll<0.88)return moves[2]; // tier 1 energy
+  if(roll<0.96)return moves[3]; // tier 2 energy
+  return moves[4]; // big move
+}
+
+// ── Energy system ──────────────────────────────────────────────────────────
+let energy=0;
+const ENERGY_PACKS=[
+  {name:"Spark Pack",amount:20,cost:10,icon:"⚡"},
+  {name:"Charge Pack",amount:50,cost:20,icon:"🔋"},
+  {name:"Power Pack",amount:120,cost:40,icon:"💡"},
+  {name:"Mega Pack",amount:300,cost:80,icon:"🌩️"}
+];
+
+function updateEnergy(){document.getElementById('energy-count').textContent=energy;}
+
+function buyEnergy(pack){
+  if(balls<pack.cost){showToast("Not enough Pokéballs!");return;}
+  balls-=pack.cost;updateBalls();
+  energy+=pack.amount;updateEnergy();
+  showToast("Got "+pack.amount+" Energy!");
+}
+
+function renderEnergyStore(){
+  const sec=document.getElementById('energy');sec.innerHTML='';
+  const hdr=document.createElement('div');hdr.className='info-bar';
+  hdr.innerHTML='Use <b>Energy</b> to power strong moves in battle. Free moves cost 0 energy. Spend Pokéballs here to stock up.';
+  sec.appendChild(hdr);
+  const lbl=document.createElement('div');lbl.className='tier-label';lbl.innerHTML='<span>Energy Packs</span>';sec.appendChild(lbl);
+  const grid=document.createElement('div');grid.className='energy-store-grid';
+  ENERGY_PACKS.forEach(pack=>{
+    const c=document.createElement('div');c.className='energy-card';
+    c.innerHTML=`<div style="font-size:32px;margin-bottom:6px">${pack.icon}</div><div class="energy-card-name">${pack.name}</div><div class="energy-card-amount">${pack.amount} ⚡</div><div class="energy-card-cost">${ballSVGInline()} ${pack.cost} Pokéballs</div>`;
+    c.onclick=()=>buyEnergy(pack);
+    grid.appendChild(c);
+  });
+  sec.appendChild(grid);
+  const moveLbl=document.createElement('div');moveLbl.className='tier-label';moveLbl.style.marginTop='1rem';moveLbl.innerHTML='<span>Move energy costs</span>';sec.appendChild(moveLbl);
+  const tbl=document.createElement('table');tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e0e0d8';
+  tbl.innerHTML='<thead><tr style="background:#f5f5f0"><th style="padding:8px 10px;text-align:left;font-weight:600;color:#555">Tier</th><th style="padding:8px;text-align:center;color:#555">Damage</th><th style="padding:8px;text-align:center;color:#555">Energy</th></tr></thead><tbody>'+
+    '<tr style="border-top:1px solid #eee"><td style="padding:7px 10px;color:#27500a;font-weight:600">Free moves</td><td style="text-align:center;color:#888">0.6–1.0× ATK</td><td style="text-align:center;color:#27500a;font-weight:600">FREE</td></tr>'+
+    '<tr style="border-top:1px solid #eee;background:#fafaf8"><td style="padding:7px 10px;color:#1a5fa0;font-weight:600">Charged (weak)</td><td style="text-align:center;color:#888">1.6–1.7× ATK</td><td style="text-align:center;color:#1a6fc4;font-weight:600">15 ⚡</td></tr>'+
+    '<tr style="border-top:1px solid #eee"><td style="padding:7px 10px;color:#6a2ba8;font-weight:600">Charged (strong)</td><td style="text-align:center;color:#888">2.2–2.4× ATK</td><td style="text-align:center;color:#1a6fc4;font-weight:600">25–30 ⚡</td></tr>'+
+    '<tr style="border-top:1px solid #eee;background:#fafaf8"><td style="padding:7px 10px;color:#b05e00;font-weight:600">Signature move</td><td style="text-align:center;color:#888">3.0–3.2× ATK</td><td style="text-align:center;color:#1a6fc4;font-weight:600">40–45 ⚡</td></tr>'+
+    '</tbody>';
+  sec.appendChild(tbl);
+}
+
+// ── Battle functions ────────────────────────────────────────────────────────
+function startBattle(){
+  if(!selectedMon)return;
+  const rival=pickRival();
+  rival.curHp=rival.hp;
+  battleState={
+    player:{...selectedMon,curHp:selectedMon.hp},
+    rival,
+    log:['A wild '+rival.n+' appeared! ('+rival.label+') Go, '+selectedMon.n+'!'],
+    over:false,playerWon:false,turn:'player'
+  };
+  renderBattle();
+}
+
+function useMove(moveIdx){
+  if(!battleState||battleState.over||battleState.turn!=='player')return;
+  const{player,rival}=battleState;
+  const moves=getMovesForMon(player);
+  const move=moves[moveIdx];
+  if(!move)return;
+  if(move.energy>0&&energy<move.energy){showToast("Not enough energy! Need "+move.energy+" ⚡");return;}
+  if(move.energy>0){energy-=move.energy;updateEnergy();}
+  const variance=0.85+Math.random()*0.3;
+  const dmg=Math.max(1,Math.round(player.atk*move.dmgMult*variance));
+  rival.curHp=Math.max(0,rival.curHp-dmg);
+  const energyNote=move.energy>0?(' (−'+move.energy+'⚡)'):'';
+  battleState.log.push(player.n+' used '+move.name+' for '+dmg+' damage!'+energyNote);
+  const rf=document.getElementById('rival-fig');
+  if(rf){rf.classList.add('hit-flash');setTimeout(()=>rf.classList.remove('hit-flash'),280);}
+  if(rival.curHp<=0){
+    battleState.over=true;battleState.playerWon=true;
+    battleState.log.push(rival.n+' fainted! You win! +20 Pokéballs!');
+    balls+=20;updateBalls();renderBattle();return;
+  }
+  battleState.turn='rival';renderBattle();
+  setTimeout(()=>{
+    if(!battleState||battleState.over)return;
+    const rMove=getRivalMove(rival);
+    const rv=0.85+Math.random()*0.3;
+    const rdmg=Math.max(1,Math.round(rival.atk*rMove.dmgMult*rv));
+    player.curHp=Math.max(0,player.curHp-rdmg);
+    battleState.log.push(rival.n+' used '+rMove.name+' for '+rdmg+' damage!');
+    const pf=document.getElementById('player-fig');
+    if(pf){pf.classList.add('hit-flash');setTimeout(()=>pf.classList.remove('hit-flash'),280);}
+    if(player.curHp<=0){
+      battleState.over=true;battleState.playerWon=false;
+      const loss=Math.min(10,balls);balls=Math.max(0,balls-loss);updateBalls();
+      battleState.log.push(player.n+' fainted! You lost '+loss+' Pokéballs.');
+    }
+    battleState.turn='player';renderBattle();
+  },950);
+}
+
+function doFlee(){
+  if(!battleState||battleState.over)return;
+  battleState.log.push('You fled safely — no Pokéballs lost!');
+  battleState.over=true;battleState.playerWon=false;battleState.fledSafely=true;
+  renderBattle();
+}
+
+function hpColor(p){return p>50?'#4a9e2f':p>25?'#e09020':'#c82020';}
+
+function renderBattleScreen(b){
+  const{player,rival,log,over,playerWon,turn,fledSafely}=battleState;
+  b.innerHTML='';
+  const pPct=Math.round((player.curHp/player.hp)*100);
+  const rPct=Math.round((rival.curHp/rival.hp)*100);
+  const arena=document.createElement('div');arena.className='battle-arena';
+  arena.innerHTML=`<div class="fighters">
+    <div class="fighter" id="player-fig">
+      <div class="fighter-label">You · T${player.tier} S${player.stage}</div>
+      <img src="${spriteUrl(player.n)}" alt="${player.n}" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
+      <div class="fighter-name">${player.n}</div>
+      <div class="fighter-type">${player.t}</div>
+      <div class="fighter-stats"><span>${player.hp}HP</span><span>${player.atk}ATK</span></div>
+      <div class="hp-bar-wrap"><div class="hp-bar" style="width:${pPct}%;background:${hpColor(pPct)}"></div></div>
+      <div class="hp-text">${player.curHp} / ${player.hp}</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="fighter" id="rival-fig">
+      <div class="fighter-label">Rival · T${rival.tier}</div>
+      <img src="${rival.img}" alt="${rival.n}" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
+      <div class="fighter-name">${rival.n}</div>
+      <div class="fighter-type">${rival.t}</div>
+      <span class="rival-badge ${rival.labelClass}">${rival.label}</span>
+      <div class="hp-bar-wrap"><div class="hp-bar" style="width:${rPct}%;background:${hpColor(rPct)}"></div></div>
+      <div class="hp-text">${rival.curHp} / ${rival.hp}</div>
+    </div>
+  </div>`;
+  b.appendChild(arena);
+
+  const logEl=document.createElement('div');logEl.className='battle-log';
+  log.forEach(l=>{const e=document.createElement('div');e.className='log-entry';e.textContent=l;logEl.appendChild(e);});
+  b.appendChild(logEl);logEl.scrollTop=logEl.scrollHeight;
+
+  if(over){
+    const res=document.createElement('div');
+    if(playerWon){res.className='battle-result result-win';res.innerHTML='<div class="result-title">Victory! 🎉</div><div class="result-sub">+20 Pokéballs earned!</div>';}
+    else if(fledSafely){res.className='battle-result result-fled';res.innerHTML='<div class="result-title">Fled safely</div><div class="result-sub">No Pokéballs lost!</div>';}
+    else{res.className='battle-result result-lose';res.innerHTML='<div class="result-title">Defeated</div><div class="result-sub">−10 Pokéballs.</div>';}
+    b.appendChild(res);
+    const btns=document.createElement('div');btns.className='battle-btns';
+    btns.innerHTML='<button onclick="rematch()">Rematch</button><button onclick="newBattle()">Change Pokémon</button>';
+    b.appendChild(btns);
+  } else if(turn==='player'){
+    // Energy display
+    const enRow=document.createElement('div');
+    enRow.style.cssText='font-size:12px;color:#1a6fc4;font-weight:600;margin-bottom:6px;text-align:right';
+    enRow.textContent='⚡ '+energy+' energy';
+    b.appendChild(enRow);
+    // Move buttons
+    const moves=getMovesForMon(player);
+    const grid=document.createElement('div');grid.className='attack-grid';
+    moves.forEach((mv,i)=>{
+      const isFree=mv.energy===0;
+      const canAfford=isFree||(energy>=mv.energy);
+      const btn=document.createElement('button');
+      btn.className='attack-btn-card'+(isFree?' free-move':'');
+      btn.disabled=!canAfford;
+      const costLabel=isFree?'<span class="atk-cost-free">FREE</span>':'<span class="atk-cost-paid">'+mv.energy+'⚡</span>';
+      btn.innerHTML=`<div class="atk-name">${mv.name}</div><div class="atk-meta"><span class="atk-dmg">${mv.dmgMult}× ATK</span>${costLabel}</div>`;
+      btn.title=mv.desc;
+      btn.onclick=()=>useMove(i);
+      grid.appendChild(btn);
+    });
+    b.appendChild(grid);
+    const flee=document.createElement('button');
+    flee.className='flee-safe';flee.style.cssText='width:100%;margin-top:8px;padding:9px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;border:1.5px solid #97c459;background:#eaf3de;color:#27500a';
+    flee.textContent='Flee (free)';flee.onclick=doFlee;b.appendChild(flee);
+  } else {
+    const waiting=document.createElement('div');
+    waiting.style.cssText='text-align:center;padding:1rem;color:#888;font-size:13px;font-weight:500';
+    waiting.textContent='Rival is attacking…';
+    b.appendChild(waiting);
+  }
+}
+
+function rematch(){if(selectedMon)startBattle();}
+function newBattle(){battleState=null;selectedMon=null;renderBattle();}
+
+renderShop();renderCollection();renderEnergyStore();
+</script>
+</body>
+</html>
